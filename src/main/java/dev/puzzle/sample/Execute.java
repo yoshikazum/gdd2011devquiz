@@ -28,7 +28,19 @@ import java.util.concurrent.ThreadPoolExecutor.AbortPolicy;
  * 
  */
 
+@SuppressWarnings("unchecked")
 public class Execute {
+  
+
+  public static void main(String[] args){
+    System.out.println("main");
+    StringBoard aBoard = new StringBoard(3, 3, "123456708");
+    Execute exe = new Execute();
+    HashMap<Integer, StringBoard> history = new HashMap<Integer, StringBoard>();
+    history.put(aBoard.hashCode(), aBoard);
+    exe.solveDepth(0, aBoard, history, 1);
+  }
+  
   /**
    * コンストラクター
    */
@@ -250,10 +262,11 @@ public class Execute {
 
     int i = 0;
     int n = 8;
+    int limit = 30;
     for (int j = 0; j < 200; j++) {
       while (result == null) {
         System.out.print(".");
-        result = solveMap(map);
+        result = solveMap(map, limit);
         i++;
         if (i > n) {
           break;
@@ -261,11 +274,11 @@ public class Execute {
       }
 
       if (result != null) {
-        System.out.println("result: " + result.operationHistory);
+        System.out.println("result: " + result.getOperationHistory());
         break;
       }
-      
-      if(map.hashCode()==lowestCostBoard.hashCode()){
+
+      if (map.hashCode() == lowestCostBoard.hashCode()) {
         System.err.println("solving failed");
         n++;
       }
@@ -274,7 +287,17 @@ public class Execute {
       map = lowestCostBoard.clone();
       exeQueue = new MapQueue();
       exeQueue.offer(map);
+
+      // 直前のマップを追加
+      int lastOperation = map.getLastOperation();
+      StringBoard oldMap = null;
+      try {
+        oldMap = map.operate(lastOperation);
+      } catch (CloneNotSupportedException e) {
+        e.printStackTrace();
+      }
       searchedMap = new Hashtable<Integer, StringBoard>();
+      searchedMap.put(new Integer(oldMap.hashCode()), oldMap);
       j++;
     }
     if (result != null)
@@ -287,7 +310,7 @@ public class Execute {
   Hashtable<Integer, StringBoard> searchedMap;
   StringBoard lowestCostBoard;
 
-  public StringBoard solveMap(StringBoard aBoard) {
+  public StringBoard solveMap(StringBoard aBoard, int limit) {
 
     boolean result = false;
 
@@ -299,7 +322,7 @@ public class Execute {
 
       StringBoard aMap = exeQueue.poll();
 
-      if (lowestCostBoard.getEstimatedValue() >= aMap.getEstimatedValue()) {
+      if (lowestCostBoard.score() >= aMap.score()) {
         lowestCostBoard = aMap.clone();
       }
 
@@ -369,6 +392,12 @@ public class Execute {
           searchedMap.put(new Integer(hashMap.hashCode()), hashMap);
         }
 
+        // 下限法
+        int newLow = hashMap.getEstimatedValue();
+        int move = map.get(0).getOperationHistory().length();
+        if (newLow + move > limit)
+          continue;
+
         String operation = "";
         if (k == 1)
           operation = "D";
@@ -388,5 +417,94 @@ public class Execute {
     }
 
     return null;
+  }
+  boolean result = false;
+  public boolean solveDepth(int i, StringBoard aBoard, HashMap<Integer, StringBoard> history, int limit) {
+    //System.out.print(".");
+    String goal = aBoard.getGoal();
+    StringBoard goalMap = new StringBoard(aBoard.height, aBoard.width, goal);
+    
+    //System.out.println("test: "+ aBoard.getStringMap()+ ", goal: "+goalMap.getStringMap());
+    if (aBoard.compareTo(aBoard)) {
+      System.out.println("result: " + aBoard.getOperationHistory());
+      this.result = true;
+      return true;
+    }
+    //int limit = aBoard.getEstimatedValue()*3;
+    if (i > limit) {
+      //System.out.println(aBoard.getOperationHistory());
+      //System.out.println("over 60");
+      //System.out.print(".");
+      return false;
+    } else {
+      
+      int operationList = aBoard.getOperableList();
+      int lastOpelation = aBoard.getLastOperation();
+      //System.out.println(operationList+ "-"+ lastOpelation);
+      operationList -= lastOpelation;
+      String historyString = aBoard.getOperationHistory();
+      int lastCommand = 0;
+      for (int j = 0; j < 4; j++) {
+        if (operationList == 0)
+          break;
+        StringBoard nextBoard = null;
+        if ((operationList & COMMAND_D) == COMMAND_D) {
+          try {
+            nextBoard = aBoard.operate(COMMAND_D);
+            nextBoard.setOperationHistory(historyString + "D");
+            lastCommand = COMMAND_D;
+          } catch (CloneNotSupportedException e) {
+            e.printStackTrace();
+          }
+          operationList -= COMMAND_D;
+        } else if ((operationList & COMMAND_L) == COMMAND_L) {
+          try {
+            nextBoard = aBoard.operate(COMMAND_L);
+            nextBoard.setOperationHistory(historyString + "L");
+            lastCommand = COMMAND_L;
+          } catch (CloneNotSupportedException e) {
+            e.printStackTrace();
+          }
+
+          operationList -= COMMAND_L;
+        } else if ((operationList & COMMAND_R) == COMMAND_R) {
+          try {
+            nextBoard = aBoard.operate(COMMAND_R);
+            nextBoard.setOperationHistory(historyString + "R");
+            lastCommand = COMMAND_R;
+          } catch (CloneNotSupportedException e) {
+            e.printStackTrace();
+          }
+
+          operationList -= COMMAND_R;
+        } else {
+          try {
+            nextBoard = aBoard.operate(COMMAND_U);
+            nextBoard.setOperationHistory(historyString + "U");
+            lastCommand = COMMAND_U;
+          } catch (CloneNotSupportedException e) {
+            e.printStackTrace();
+          }
+
+          operationList -= COMMAND_U;
+        }
+        
+
+        // 下限法
+        int newLow = nextBoard.getEstimatedValue();
+        int move = aBoard.getOperationHistory().length();
+        if (newLow + move > limit*2){
+          continue;
+        }
+        
+        if (history.containsKey(nextBoard.hashCode())) {
+
+        } else {
+          history.put(new Integer(nextBoard.hashCode()), nextBoard);
+          solveDepth(++i, nextBoard, history, limit);
+        }
+      }
+    }
+    return false;
   }
 }

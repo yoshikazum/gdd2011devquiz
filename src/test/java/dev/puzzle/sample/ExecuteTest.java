@@ -161,6 +161,22 @@ public class ExecuteTest extends TestCase {
     assertFalse(result);
   }
   
+  public void testSolveDepth(){
+    HashMap<Integer, StringBoard> history = new HashMap<Integer, StringBoard>();
+    StringBoard aBoard = new StringBoard(4, 4, "23481570A6BC9DEF");
+    System.out.println("estimatedValue: "+ aBoard.getEstimatedValue());
+    int limit = aBoard.getEstimatedValue();
+    boolean result = false;
+    while(limit < aBoard.getEstimatedValue()*4){
+      System.out.println("limit: "+limit);
+      result = exe.solveDepth(0, aBoard, history, limit);
+      if(exe.result)break;
+      limit += 2;
+      history = new HashMap<Integer, StringBoard>();
+    }
+    assertTrue(exe.result);
+  }
+  
   public void testSolve(){
     /*
     Board aBoard = new Board(0, 4, 3, "1624537890AB");
@@ -169,9 +185,11 @@ public class ExecuteTest extends TestCase {
     */
     
     //StringBoard aBoard = new StringBoard(4, 3,"1624537890AB");
-    StringBoard aBoard = new StringBoard(3, 3,"658074213");
-   // StringBoard aBoard = new StringBoard(3, 3, "243108765");
+    // StringBoard aBoard = new StringBoard(3, 3, "243108765");
+    /*
+    StringBoard aBoard = new StringBoard(3, 3,"432587106");
     assertTrue(exe.solve(aBoard));
+    */
     
     
     //exe.writeToFile("output.txt", exe.getHistories());

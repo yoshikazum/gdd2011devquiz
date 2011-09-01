@@ -153,6 +153,8 @@ public class Board {
         if (testValue < 1)
           continue; // 0(空白)と-1(壁)の見積もりはやらない
         Integer goalPosition = goalMapForSearch.get(testValue);
+        if(goalPosition==null)
+          continue;
         int diffOfTen =
             Math.abs((int) goalPosition.intValue() / 10 - (int) testKey / 10);
         int diff = Math.abs(goalPosition.intValue() % 10 - testKey % 10);

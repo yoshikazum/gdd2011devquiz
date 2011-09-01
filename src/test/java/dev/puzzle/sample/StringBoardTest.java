@@ -38,7 +38,7 @@ public class StringBoardTest extends TestCase {
     System.out.println("hash: "+hash);
     assertEquals(-1757203306, hash);
     
-    assertNotSame(hash, board3.hashCode);
+    assertNotSame(hash, board3.hashCode());
     assertEquals(board3.hashCode(), board3.hashCode());
   }
 

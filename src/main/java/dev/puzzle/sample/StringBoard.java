@@ -12,12 +12,12 @@ import java.util.HashMap;
 public class StringBoard {
   int width;
   int height;
-  String stringMap;
-  int hashCode;
-  String goalMap;
-  String operationHistory;
-  int zeroIndex;
-  int estimatedValue;
+  private String stringMap;
+  private int hashCode;
+  private String goalMap;
+  private String operationHistory;
+  private int zeroIndex;
+  private int estimatedValue;
 
   public StringBoard() {
     width = 0;
@@ -166,8 +166,9 @@ public class StringBoard {
     tmp = chars[zeroIndex];
     chars[zeroIndex] = chars[zeroIndex + n];
     chars[zeroIndex + n] = tmp;
-    zeroIndex = zeroIndex + n;
-
+    int newZeroIndex = zeroIndex + n;
+    
+    //System.out.println(zeroIndex+ "->"+ newZeroIndex);
     StringBoard returnStringBoard =
         new StringBoard(this.height, this.width, new String(chars));
 
@@ -216,9 +217,41 @@ public class StringBoard {
     HashMap<Integer, Integer> gMap =
         Board.mapFromString(height, width, this.goalMap);
     return Board.estimateMap(hMap, gMap);
+   }
+    
+  public int score(){
+    char[] current = this.stringMap.toCharArray();
+    char[] goal    = this.goalMap.toCharArray();
+    
+    int score = 0;
+    for (int i = 0; i < goal.length; i++) {
+      if(current[i] == goal[i])
+        score++;
+    }
+    return 9999 - score;
   }
 
   public int getEstimatedValue() {
     return estimatedValue;
+  }
+
+  public int getLastOperation() {
+    int index = this.operationHistory.length() - 1;
+    if(index<0)return 0;
+    char[] string = this.operationHistory.toCharArray();
+    char operation = string[index];
+    
+    int result = 0;
+    if(operation == 'L'){
+      result = COMMAND_R;
+    }else if(operation == 'R'){
+      result = COMMAND_L;
+    }else if(operation == 'U'){
+      result = COMMAND_D;
+    }else{
+      result = COMMAND_U;
+    }
+    
+    return result;
   }
 }
