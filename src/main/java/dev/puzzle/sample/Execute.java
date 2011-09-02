@@ -10,6 +10,11 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.sql.Array;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -30,22 +35,29 @@ import java.util.concurrent.ThreadPoolExecutor.AbortPolicy;
 
 @SuppressWarnings("unchecked")
 public class Execute {
-  
 
-  public static void main(String[] args){
+  public static void main(String[] args) {
     System.out.println("main");
-    StringBoard aBoard = new StringBoard(3, 3, "123456708");
+
     Execute exe = new Execute();
-    HashMap<Integer, StringBoard> history = new HashMap<Integer, StringBoard>();
-    history.put(aBoard.hashCode(), aBoard);
-    exe.solveDepth(0, aBoard, history, 1);
+    ArrayList<StringBoard> histories = new ArrayList<StringBoard>();
+    for (Iterator iterator = exe.getUnsolvedData().iterator(); iterator
+        .hasNext();) {
+      StringBoard board = (StringBoard) iterator.next();
+      StringBoard result = exe.solveOneBoard(board);
+
+      if (result != null){
+        System.out.println("id: "+ result.id+ ", ope: "+result.getOperationHistory());
+        exe.updateOperation(result.id, result.getOperationHistory());
+      }
+    }
   }
-  
+
   /**
    * コンストラクター
    */
   public Execute() {
-    histories = new ArrayList<OperationHistory>();
+    histories = new ArrayList<StringBoard>();
   }
 
   static Integer ZEROPOSITIONKEY = new Integer(-100);
@@ -131,9 +143,9 @@ public class Execute {
     return this.totalBoards;
   }
 
-  private List<Board> boardList;
+  private List<StringBoard> boardList;
 
-  public List<Board> getBoardList() {
+  public List<StringBoard> getBoardList() {
     return boardList;
   }
 
@@ -167,7 +179,7 @@ public class Execute {
     }
 
     // 全ボードの読み込み
-    boardList = new ArrayList<Board>();
+    boardList = new ArrayList<StringBoard>();
     int line = 0;
     while (str != null) {
       line++;
@@ -179,11 +191,10 @@ public class Execute {
         String[] stringBoard = str.split(",");
         int w = new Integer(stringBoard[0]).intValue();
         int h = new Integer(stringBoard[1]).intValue();
-        String content = new String(stringBoard[2].trim());
-        Board aBoard = new Board(line, w, h, content);
-        boardList.add(aBoard);
+        StringBoard content = new StringBoard(h, w, stringBoard[2].trim());
+        boardList.add(content);
+        // this.insertData(line, w, h, stringBoard[2].trim());
       } catch (IOException e) {
-        // TODO 自動生成された catch ブロック
         e.printStackTrace();
       }
     }
@@ -196,9 +207,7 @@ public class Execute {
     }
   }
 
-  public
-      void
-      writeToFile(String filePath, ArrayList<OperationHistory> histories) {
+  public void writeToFile(String filePath, ArrayList<StringBoard> histories2) {
 
     BufferedWriter fileWriter = null;
     try {
@@ -207,9 +216,9 @@ public class Execute {
           new BufferedWriter(new OutputStreamWriter(new FileOutputStream(
               "output.txt"), "UTF-8"));
 
-      for (Iterator iterator = histories.iterator(); iterator.hasNext();) {
+      for (Iterator iterator = histories2.iterator(); iterator.hasNext();) {
         OperationHistory operationHistory = (OperationHistory) iterator.next();
-
+        // System.out.println("ope: " + operationHistory.getResult());
         if (operationHistory.getResult()) {
           fileWriter.write(operationHistory.getOperation());
           fileWriter.newLine();
@@ -240,13 +249,13 @@ public class Execute {
     });
   }
 
-  private ArrayList<OperationHistory> histories;
+  private ArrayList<StringBoard> histories;
 
-  public ArrayList<OperationHistory> getHistories() {
+  public ArrayList<StringBoard> getHistories() {
     return histories;
   }
 
-  public void setHistories(ArrayList<OperationHistory> histories) {
+  public void setHistories(ArrayList<StringBoard> histories) {
     this.histories = histories;
   }
 
@@ -418,29 +427,38 @@ public class Execute {
 
     return null;
   }
+
   boolean result = false;
-  public boolean solveDepth(int i, StringBoard aBoard, HashMap<Integer, StringBoard> history, int limit) {
-    //System.out.print(".");
+  private StringBoard resultStringBoard;
+
+  public boolean solveDepth(
+      int i,
+      StringBoard aBoard,
+      HashMap<Integer, StringBoard> history,
+      int limit) {
+    // System.out.print(".");
     String goal = aBoard.getGoal();
     StringBoard goalMap = new StringBoard(aBoard.height, aBoard.width, goal);
-    
-    //System.out.println("test: "+ aBoard.getStringMap()+ ", goal: "+goalMap.getStringMap());
+
+    // System.out.println("test: "+ aBoard.getStringMap()+
+    // ", goal: "+goalMap.getStringMap());
     if (aBoard.compareTo(aBoard)) {
-      System.out.println("result: " + aBoard.getOperationHistory());
+      // System.out.println("result: " + aBoard.getOperationHistory());
       this.result = true;
+      this.resultStringBoard = aBoard.clone();
       return true;
     }
-    //int limit = aBoard.getEstimatedValue()*3;
+    // int limit = aBoard.getEstimatedValue()*3;
     if (i > limit) {
-      //System.out.println(aBoard.getOperationHistory());
-      //System.out.println("over 60");
-      //System.out.print(".");
+      // System.out.println(aBoard.getOperationHistory());
+      // System.out.println("over 60");
+      // System.out.print(".");
       return false;
     } else {
-      
+
       int operationList = aBoard.getOperableList();
       int lastOpelation = aBoard.getLastOperation();
-      //System.out.println(operationList+ "-"+ lastOpelation);
+      // System.out.println(operationList+ "-"+ lastOpelation);
       operationList -= lastOpelation;
       String historyString = aBoard.getOperationHistory();
       int lastCommand = 0;
@@ -488,15 +506,14 @@ public class Execute {
 
           operationList -= COMMAND_U;
         }
-        
 
         // 下限法
         int newLow = nextBoard.getEstimatedValue();
         int move = aBoard.getOperationHistory().length();
-        if (newLow + move > limit*2){
+        if (newLow + move > limit + 5) {
           continue;
         }
-        
+
         if (history.containsKey(nextBoard.hashCode())) {
 
         } else {
@@ -506,5 +523,125 @@ public class Execute {
       }
     }
     return false;
+  }
+
+  public StringBoard solveOneBoard(StringBoard aBoard) {
+
+    HashMap<Integer, StringBoard> history = new HashMap<Integer, StringBoard>();
+    // System.out.println("estimatedValue: "+ aBoard.getEstimatedValue());
+    int limit = aBoard.getEstimatedValue();
+    this.result = false;
+    this.resultStringBoard = null;
+    while (limit < 40/* aBoard.getEstimatedValue()*3 */) {
+      // System.out.println("limit: "+limit);
+      result = this.solveDepth(0, aBoard, history, limit);
+      if (this.result)
+        break;
+      limit += 2;
+      history = new HashMap<Integer, StringBoard>();
+    }
+
+    if (this.resultStringBoard == null)
+      return null;
+
+    boolean result2 =
+        (this.resultStringBoard.getStringMap().equalsIgnoreCase("")) ? false
+            : true;
+    if (result2 == true) {
+      System.out.println("result: " + result2 + " string: "
+          + this.resultStringBoard.getOperationHistory());
+    }
+    return this.resultStringBoard.clone();
+  }
+
+  public void createDB() {
+    try {
+      Class.forName("org.sqlite.JDBC");
+
+      Connection conn = DriverManager.getConnection("jdbc:sqlite:results.db");
+      Statement stmt = conn.createStatement();
+      stmt
+          .execute("create table results( id integer primary key, width integer, height integer, map text, operation text )");
+
+      conn.close();
+    } catch (ClassNotFoundException e) {
+      e.printStackTrace();
+    } catch (SQLException e) {
+      // TODO 自動生成された catch ブロック
+      e.printStackTrace();
+    }
+  }
+
+  public boolean insertData(int id, int width, int height, String map) {
+    Connection conn = null;
+
+    try {
+
+      Class.forName("org.sqlite.JDBC");
+
+      conn = DriverManager.getConnection("jdbc:sqlite:results.db");
+      Statement stmt = conn.createStatement();
+      stmt.execute("insert into results values (" + id + "," + width + ","
+          + height + ",'" + map + "', null)");
+
+      conn.close();
+      return true;
+    } catch (Exception e) {
+      e.printStackTrace();
+      return false;
+    }
+  }
+
+  public ArrayList<StringBoard> getUnsolvedData() {
+    Connection conn = null;
+
+    try {
+
+      Class.forName("org.sqlite.JDBC");
+
+      conn = DriverManager.getConnection("jdbc:sqlite:results.db");
+      Statement stmt = conn.createStatement();
+      ResultSet rs =
+          stmt.executeQuery("select * from results where operation IS NULL");
+
+      ArrayList<StringBoard> list = new ArrayList<StringBoard>();
+      for (ResultSet iterator = rs; iterator.next();) {
+        int id = rs.getInt(1);
+        int width = rs.getInt(2);
+        int height = rs.getInt(3);
+        String map = rs.getString(4);
+        StringBoard board = new StringBoard(id, height, width, map);
+        list.add(board);
+      }
+
+      conn.close();
+
+      return list;
+    } catch (Exception e) {
+      e.printStackTrace();
+      return null;
+    }
+  }
+
+  public boolean updateOperation(int id, String operation) {
+    Connection conn = null;
+
+    try {
+
+      Class.forName("org.sqlite.JDBC");
+
+      conn = DriverManager.getConnection("jdbc:sqlite:results.db");
+      Statement stmt = conn.createStatement();
+
+      stmt.execute("update results set operation = '" + operation
+          + "' where id = " + id);
+
+      conn.close();
+
+      return true;
+    } catch (Exception e) {
+      e.printStackTrace();
+      return false;
+    }
   }
 }

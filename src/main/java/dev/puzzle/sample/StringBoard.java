@@ -10,6 +10,7 @@ import java.util.HashMap;
  * 
  */
 public class StringBoard {
+  int id;
   int width;
   int height;
   private String stringMap;
@@ -29,6 +30,18 @@ public class StringBoard {
     zeroIndex = -1;
     estimatedValue = 99999;
   }
+  
+  public StringBoard(int id, int height, int width, String stringMap) {
+    this.id = id;
+    this.height = height;
+    this.width = width;
+    this.stringMap = stringMap;
+    this.hashCode = stringMap.hashCode();
+    this.goalMap = getGoal();
+    zeroIndex = stringMap.indexOf("0");
+    operationHistory = "";
+    estimatedValue = calculateValue();
+  }
 
   public StringBoard(int height, int width, String stringMap) {
     this.height = height;
@@ -43,7 +56,7 @@ public class StringBoard {
 
   public StringBoard clone() {
     StringBoard newBoard =
-        new StringBoard(this.height, this.width, this.stringMap);
+        new StringBoard(this.id, this.height, this.width, this.stringMap);
     newBoard.setOperationHistory(this.operationHistory);
     newBoard.setEstimatedValue(this.estimatedValue);
     return newBoard;
@@ -170,7 +183,7 @@ public class StringBoard {
     
     //System.out.println(zeroIndex+ "->"+ newZeroIndex);
     StringBoard returnStringBoard =
-        new StringBoard(this.height, this.width, new String(chars));
+        new StringBoard(this.id, this.height, this.width, new String(chars));
 
     return returnStringBoard;
   }
