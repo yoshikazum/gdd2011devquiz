@@ -16,6 +16,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -40,15 +41,19 @@ public class Execute {
     System.out.println("main");
 
     Execute exe = new Execute();
-    ArrayList<StringBoard> histories = new ArrayList<StringBoard>();
+    ArrayList<StringBoard> histories;
     for (Iterator iterator = exe.getUnsolvedData().iterator(); iterator
         .hasNext();) {
       StringBoard board = (StringBoard) iterator.next();
-      StringBoard result = exe.solveOneBoard(board);
+      StringBoard resultBoard = exe.solveOneBoard(board);
+      histories = new ArrayList<StringBoard>();
 
-      if (result != null){
-        System.out.println("id: "+ result.id+ ", ope: "+result.getOperationHistory());
-        exe.updateOperation(result.id, result.getOperationHistory());
+      if (!resultBoard.getOperationHistory().trim().equalsIgnoreCase("")) {
+        System.out.println("id: " + resultBoard.id + ", ope: "
+            + resultBoard.getOperationHistory());
+        exe.updateOperation(resultBoard.id, resultBoard.getOperationHistory());
+      }else{
+        System.out.println("failed");
       }
     }
   }
@@ -207,7 +212,9 @@ public class Execute {
     }
   }
 
-  public void writeToFile(String filePath, ArrayList<StringBoard> histories2) {
+  public void writeToFile(String filePath) {
+
+    ArrayList<StringBoard> allresults = this.getAllDataFromDB();
 
     BufferedWriter fileWriter = null;
     try {
@@ -216,11 +223,12 @@ public class Execute {
           new BufferedWriter(new OutputStreamWriter(new FileOutputStream(
               "output.txt"), "UTF-8"));
 
-      for (Iterator iterator = histories2.iterator(); iterator.hasNext();) {
-        OperationHistory operationHistory = (OperationHistory) iterator.next();
+      for (Iterator iterator = allresults.iterator(); iterator.hasNext();) {
+        StringBoard board = (StringBoard) iterator.next();
+        // System.out.println("result: " + board.getOperationHistory());
         // System.out.println("ope: " + operationHistory.getResult());
-        if (operationHistory.getResult()) {
-          fileWriter.write(operationHistory.getOperation());
+        if (board.getOperationHistory() != null) {
+          fileWriter.write(board.getOperationHistory());
           fileWriter.newLine();
         } else {
           fileWriter.newLine();
@@ -430,6 +438,7 @@ public class Execute {
 
   boolean result = false;
   private StringBoard resultStringBoard;
+  StringBoard bestScoreBoard;
 
   public boolean solveDepth(
       int i,
@@ -440,19 +449,22 @@ public class Execute {
     String goal = aBoard.getGoal();
     StringBoard goalMap = new StringBoard(aBoard.height, aBoard.width, goal);
 
+    if (this.result)// すでに発見していたら処理しない
+      return true;
     // System.out.println("test: "+ aBoard.getStringMap()+
     // ", goal: "+goalMap.getStringMap());
     if (aBoard.compareTo(aBoard)) {
-      // System.out.println("result: " + aBoard.getOperationHistory());
+      //System.out.println("result: " + aBoard.getOperationHistory());
       this.result = true;
       this.resultStringBoard = aBoard.clone();
       return true;
     }
-    // int limit = aBoard.getEstimatedValue()*3;
+
     if (i > limit) {
       // System.out.println(aBoard.getOperationHistory());
       // System.out.println("over 60");
       // System.out.print(".");
+      this.resultStringBoard = null;
       return false;
     } else {
 
@@ -462,6 +474,9 @@ public class Execute {
       operationList -= lastOpelation;
       String historyString = aBoard.getOperationHistory();
       int lastCommand = 0;
+      StringBoard[] boardArray = new StringBoard[4];
+      // System.out.println("operation list: "+ operationList);
+      int k = 0;
       for (int j = 0; j < 4; j++) {
         if (operationList == 0)
           break;
@@ -510,36 +525,96 @@ public class Execute {
         // 下限法
         int newLow = nextBoard.getEstimatedValue();
         int move = aBoard.getOperationHistory().length();
-        if (newLow + move > limit + 5) {
+        if (newLow + move > limit) {
           continue;
         }
 
         if (history.containsKey(nextBoard.hashCode())) {
 
         } else {
-          history.put(new Integer(nextBoard.hashCode()), nextBoard);
-          solveDepth(++i, nextBoard, history, limit);
+          
+          if(this.bestScoreBoard==null || nextBoard.score() > this.bestScoreBoard.score()){
+            this.bestScoreBoard = nextBoard.clone();
+          }
+          
+          //System.out.println("string: " + nextBoard.getStringMap() + " e: "
+          //    + nextBoard.getEstimatedValue() + " s: " + nextBoard.score());
+          boardArray[k] = nextBoard.clone();
+          k++;
         }
       }
+
+      int min = 9999;
+      int[] commandPriority = { -1, -1, -1, -1 };
+      int minIndex = 999;
+      // System.out.println("board num: "+ k);
+      for (int m = 0; m < k; m++) {
+        for (int j = 0; j < k; j++) {
+          StringBoard stringBoard = boardArray[j];
+
+          int score = stringBoard.getEstimatedValue();
+
+          boolean insert = true;
+          for (int n = 0; n < k; n++) {
+            int p = commandPriority[n];
+            if (p == j)
+              insert = false;
+          }
+
+          if (min > score && insert) {
+            min = score;
+            minIndex = j;
+          }
+        }
+        min = 9999;
+        commandPriority[m] = minIndex;
+      }
+
+      for (int j = 0; j < k; j++) {
+        int index = commandPriority[j];
+        if (index < 0 || index == 999)
+          continue;
+        StringBoard stringBoard = boardArray[index];
+        history.put(new Integer(stringBoard.hashCode()), stringBoard);
+        solveDepth(++i, stringBoard, history, limit);
+      }
     }
+    //this.resultStringBoard = null;
     return false;
   }
 
   public StringBoard solveOneBoard(StringBoard aBoard) {
-
-    HashMap<Integer, StringBoard> history = new HashMap<Integer, StringBoard>();
-    // System.out.println("estimatedValue: "+ aBoard.getEstimatedValue());
+    this.bestScoreBoard = aBoard.clone();
+    HashMap<Integer, StringBoard> history;
+    System.out.println("solving: "+ aBoard.width+ "x"+aBoard.height+ ": "+aBoard.getStringMap());
     int limit = aBoard.getEstimatedValue();
+    boolean returnedResult = false;
     this.result = false;
-    this.resultStringBoard = null;
-    while (limit < 40/* aBoard.getEstimatedValue()*3 */) {
+    this.resultStringBoard = aBoard;
+    Calendar calendar = Calendar.getInstance();
+    long start = calendar.getTimeInMillis();
+    while (limit < 200) {
       // System.out.println("limit: "+limit);
-      result = this.solveDepth(0, aBoard, history, limit);
+      history = new HashMap<Integer, StringBoard>();
+      returnedResult = this.solveDepth(0, aBoard, history, limit);
       if (this.result)
         break;
       limit += 2;
-      history = new HashMap<Integer, StringBoard>();
+      //System.out.println("best: "+ this.bestScoreBoard.getStringMap());
+      //System.out.println("mask: "+ Long.toBinaryString(this.bestScoreBoard.mask65));
+      //System.out.println("scor: "+ Long.toBinaryString(this.bestScoreBoard.score()));
+      //System.out.println("goal: "+ aBoard.getGoal());
+      aBoard = this.bestScoreBoard.clone();
+      
+      //3分立っていたら諦める
+      Calendar now = Calendar.getInstance();
+      long current = now.getTimeInMillis();
+      if((current - start) > 60*3*1000/*3分*/){
+        System.out.println("id="+aBoard.id+ ":タイムアウト");
+        break;
+      }
     }
+    history = new HashMap<Integer, StringBoard>();
 
     if (this.resultStringBoard == null)
       return null;
@@ -550,8 +625,10 @@ public class Execute {
     if (result2 == true) {
       System.out.println("result: " + result2 + " string: "
           + this.resultStringBoard.getOperationHistory());
+      return this.resultStringBoard.clone();
+    }else{
+      return null;
     }
-    return this.resultStringBoard.clone();
   }
 
   public void createDB() {
@@ -612,6 +689,39 @@ public class Execute {
         String map = rs.getString(4);
         StringBoard board = new StringBoard(id, height, width, map);
         list.add(board);
+      }
+
+      conn.close();
+
+      return list;
+    } catch (Exception e) {
+      e.printStackTrace();
+      return null;
+    }
+  }
+
+  public ArrayList<StringBoard> getAllDataFromDB() {
+    Connection conn = null;
+
+    try {
+
+      Class.forName("org.sqlite.JDBC");
+
+      conn = DriverManager.getConnection("jdbc:sqlite:results.db");
+      Statement stmt = conn.createStatement();
+      ResultSet rs = stmt.executeQuery("select * from results");
+
+      ArrayList<StringBoard> list = new ArrayList<StringBoard>();
+      for (ResultSet iterator = rs; iterator.next();) {
+        int id = rs.getInt(1);
+        int width = rs.getInt(2);
+        int height = rs.getInt(3);
+        String map = rs.getString(4);
+        StringBoard board = new StringBoard(id, height, width, map);
+        if (rs.getString(5) != null)
+          board.setOperationHistory(rs.getString(5));
+        list.add(board);
+        // System.out.println("ope: " + board.getOperationHistory());
       }
 
       conn.close();

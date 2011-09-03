@@ -78,23 +78,7 @@ public class ExecuteTest extends TestCase {
   }
 
   public void testWriteToFile() {
-    /*
-     * ArrayList<OperationHistory> histories = new
-     * ArrayList<OperationHistory>(); OperationHistory history1 = new
-     * OperationHistory(); history1.setResult(true);
-     * history1.setOperation("hogehoge"); histories.add(history1);
-     * 
-     * 
-     * OperationHistory history2 = new OperationHistory();
-     * history2.setResult(false); history2.setOperation("hogehoge");
-     * histories.add(history2);
-     * 
-     * OperationHistory history3 = new OperationHistory();
-     * history3.setResult(true); history3.setOperation("miyoshi");
-     * histories.add(history3);
-     * 
-     * exe.writeToFile("output.txt", histories);
-     */
+    //exe.writeToFile("output.txt");
   }
 
   public void testReadInputFile() {
@@ -144,20 +128,38 @@ public class ExecuteTest extends TestCase {
     result = aBoard.compareTo(goal2);
     assertFalse(result);
   }
+  
+  public void testSolveOneBoard(){
+    StringBoard aBoard = new StringBoard(0, 5, 3, "5163E9=B084CAD2");
+    StringBoard resultBoard = exe.solveOneBoard(aBoard);
+
+    if (resultBoard != null) {
+      System.out.println("id: " + resultBoard.id + ", ope: "
+          + resultBoard.getOperationHistory());
+      exe.updateOperation(resultBoard.id, resultBoard.getOperationHistory());
+    }else{
+      System.out.println("failed");
+    }
+    assertTrue(exe.result);
+  }
 
   public void testSolveDepth() {
     HashMap<Integer, StringBoard> history = new HashMap<Integer, StringBoard>();
-    StringBoard aBoard = new StringBoard(3, 3, "123456708");
+    StringBoard aBoard = new StringBoard(0, 5, 3, "5163E9=B084CAD2");
+    //StringBoard aBoard = new StringBoard(0, 3, 3, "168452=30");
     System.out.println("estimatedValue: " + aBoard.getEstimatedValue());
     int limit = aBoard.getEstimatedValue();
-    boolean result = false;
-    while (limit < aBoard.getEstimatedValue() * 4) {
+    boolean returnedResult = false;
+    while (limit < 200/*aBoard.getEstimatedValue() * 2*/) {
       // System.out.println("limit: "+limit);
-      result = exe.solveDepth(0, aBoard, history, limit);
+      returnedResult = exe.solveDepth(0, aBoard, history, limit);
       if (exe.result)
         break;
       limit += 2;
       history = new HashMap<Integer, StringBoard>();
+      //System.out.println("best; "+ exe.bestScoreBoard.getStringMap());
+      //System.out.println("goal: "+ aBoard.getGoal());
+      aBoard = exe.bestScoreBoard;
     }
     assertTrue(exe.result);
   }

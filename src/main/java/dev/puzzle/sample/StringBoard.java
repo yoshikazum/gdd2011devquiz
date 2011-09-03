@@ -161,7 +161,7 @@ public class StringBoard {
   }
 
   public StringBoard operate(int operation) throws CloneNotSupportedException {
-
+    //System.out.println("w:"+ width+ " h:"+ height);
     char tmp = '-';
     char[] chars = this.stringMap.toCharArray();
     int n = 0;
@@ -181,7 +181,7 @@ public class StringBoard {
     chars[zeroIndex + n] = tmp;
     int newZeroIndex = zeroIndex + n;
     
-    //System.out.println(zeroIndex+ "->"+ newZeroIndex);
+    //System.out.println(this.stringMap+ "->"+ new String(chars));
     StringBoard returnStringBoard =
         new StringBoard(this.id, this.height, this.width, new String(chars));
 
@@ -231,17 +231,163 @@ public class StringBoard {
         Board.mapFromString(height, width, this.goalMap);
     return Board.estimateMap(hMap, gMap);
    }
-    
-  public int score(){
+
+  final long mask33 = Long.parseLong(
+      "111" +
+  		"000" +
+  		"000" +
+  		"000000000000000000000000000", 2);
+  final long mask34 = Long.parseLong(
+      "111" +
+      "111" +
+      "000" +
+      "000" +
+      "000000000000000000000000", 2);
+  final long mask35 = Long.parseLong(
+      "111" +
+      "111" +
+      "111" +
+      "000" +
+      "000" +
+      "000000000000000000000", 2);
+  final long mask36 = Long.parseLong(
+      "111" +
+      "111" +
+      "111" +
+      "111" +
+      "000" +
+      "000" +
+      "000000000000000000", 2);
+  final long mask43 = Long.parseLong(
+      "1111" +
+      "0000" +
+      "0000" +
+      "000000000000000000000000", 2);
+  final long mask44 = Long.parseLong(
+      "1111" +
+      "1111" +
+      "1000" +
+      "1000" +
+      "00000000000000000000", 2);
+  final long mask45 = Long.parseLong(
+      "1111" +
+      "1111" +
+      "1111" +
+      "1000" +
+      "1000" +
+      "0000000000000000", 2);
+  final long mask46 = Long.parseLong(
+      "1111" +
+      "1111" +
+      "1111" +
+      "1111" +
+      "1000" +
+      "1000" +
+      "000000000000", 2);
+  final long mask53 = Long.parseLong(
+      "11111" +
+      "11000" +
+      "11000" +
+      "100000000000000000000", 2);
+  final long mask54 = Long.parseLong(
+      "11111" +
+      "11111" +
+      "10000" +
+      "10000" +
+      "0000000000000000", 2);
+  final long mask55 = Long.parseLong(
+      "11111" +
+      "11111" +
+      "11111" +
+      "11000" +
+      "11000" +
+      "00000000000", 2);
+  final long mask56 = Long.parseLong(
+      "11111" +
+      "11111" +
+      "11111" +
+      "11111" +
+      "11000" +
+      "11000" +
+      "000000", 2);
+  final long mask63 = Long.parseLong(
+      "111111" +
+      "111000" +
+      "111000" +
+      "000000000000000000", 2);
+  final long mask64 = Long.parseLong(
+      "111111" +
+      "110000" +
+      "110000" +
+      "110000" +
+      "000000000000", 2);
+  final long mask65 = Long.parseLong(
+      "111111" +
+      "110000" +
+      "110000" +
+      "110000" +
+      "110000" +
+      "000000", 2);
+  final long mask66 = Long.parseLong(
+      "111111" +
+      "111111" +
+      "111111" +
+      "110000" +
+      "110000" +
+      "110000", 2);
+  public long score(){
     char[] current = this.stringMap.toCharArray();
     char[] goal    = this.goalMap.toCharArray();
     
-    int score = 0;
+    long score = 0;
+    long value = 1;
+    boolean nocount = false;
     for (int i = 0; i < goal.length; i++) {
-      if(current[i] == goal[i])
-        score++;
+      if(current[i]=='=' || current[i]=='0')
+        continue;
+      if(current[i] == goal[i] && !nocount){
+        score += value << (35-i);
+      }else{
+        nocount = true;
+      }
     }
-    return 9999 - score;
+    
+    //行列によってスコアマスクを変更する
+    if(width==3 && height==3){
+      score = score & mask33;
+    }else if(width==3 && height==4){
+      score = score & mask34;
+    }else if(width==3 && height==5){
+      score = score & mask35;
+    }else if(width==3 && height==6){
+      score = score & mask36;
+    }else if(width==4 && height==3){
+      score = score & mask43;
+    }else if(width==4 && height==4){
+      score = score & mask44;
+    }else if(width==4 && height==5){
+      score = score & mask45;
+    }else if(width==4 && height==6){
+      score = score & mask46;
+    }else if(width==5 && height==3){
+      score = score & mask53;
+    }else if(width==5 && height==4){
+      score = score & mask54;
+    }else if(width==5 && height==5){
+      score = score & mask55;
+    }else if(width==5 && height==6){
+      score = score & mask56;
+    }else if(width==6 && height==3){
+      score = score & mask63;
+    }else if(width==6 && height==4){
+      score = score & mask64;
+    }else if(width==6 && height==5){
+      score = score & mask65;
+    }else if(width==6 && height==6){
+      score = score & mask66;
+    }
+    
+    return score;
   }
 
   public int getEstimatedValue() {
