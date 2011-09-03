@@ -78,7 +78,7 @@ public class ExecuteTest extends TestCase {
   }
 
   public void testWriteToFile() {
-    //exe.writeToFile("output.txt");
+    exe.writeToFile("output.txt");
   }
 
   public void testReadInputFile() {

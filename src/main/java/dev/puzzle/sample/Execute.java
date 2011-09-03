@@ -42,17 +42,23 @@ public class Execute {
 
     Execute exe = new Execute();
     ArrayList<StringBoard> histories;
-    for (Iterator iterator = exe.getUnsolvedData().iterator(); iterator
+    int idNum = 1176;
+    // for (Iterator iterator = exe.getUnsolvedData().iterator(); iterator
+    for (Iterator iterator = exe.getUnsolvedDataFromId(idNum).iterator(); iterator
         .hasNext();) {
       StringBoard board = (StringBoard) iterator.next();
       StringBoard resultBoard = exe.solveOneBoard(board);
       histories = new ArrayList<StringBoard>();
 
+      if (resultBoard == null) {
+        System.out.println("failed");
+        continue;
+      }
       if (!resultBoard.getOperationHistory().trim().equalsIgnoreCase("")) {
         System.out.println("id: " + resultBoard.id + ", ope: "
             + resultBoard.getOperationHistory());
         exe.updateOperation(resultBoard.id, resultBoard.getOperationHistory());
-      }else{
+      } else {
         System.out.println("failed");
       }
     }
@@ -454,7 +460,7 @@ public class Execute {
     // System.out.println("test: "+ aBoard.getStringMap()+
     // ", goal: "+goalMap.getStringMap());
     if (aBoard.compareTo(aBoard)) {
-      //System.out.println("result: " + aBoard.getOperationHistory());
+      // System.out.println("result: " + aBoard.getOperationHistory());
       this.result = true;
       this.resultStringBoard = aBoard.clone();
       return true;
@@ -532,13 +538,14 @@ public class Execute {
         if (history.containsKey(nextBoard.hashCode())) {
 
         } else {
-          
-          if(this.bestScoreBoard==null || nextBoard.score() > this.bestScoreBoard.score()){
+
+          if (this.bestScoreBoard == null
+              || nextBoard.score() > this.bestScoreBoard.score()) {
             this.bestScoreBoard = nextBoard.clone();
           }
-          
-          //System.out.println("string: " + nextBoard.getStringMap() + " e: "
-          //    + nextBoard.getEstimatedValue() + " s: " + nextBoard.score());
+
+          // System.out.println("string: " + nextBoard.getStringMap() + " e: "
+          // + nextBoard.getEstimatedValue() + " s: " + nextBoard.score());
           boardArray[k] = nextBoard.clone();
           k++;
         }
@@ -579,14 +586,15 @@ public class Execute {
         solveDepth(++i, stringBoard, history, limit);
       }
     }
-    //this.resultStringBoard = null;
+    // this.resultStringBoard = null;
     return false;
   }
 
   public StringBoard solveOneBoard(StringBoard aBoard) {
     this.bestScoreBoard = aBoard.clone();
     HashMap<Integer, StringBoard> history;
-    System.out.println("solving: "+ aBoard.width+ "x"+aBoard.height+ ": "+aBoard.getStringMap());
+    System.out.println("solving: " + aBoard.width + "x" + aBoard.height + ": "
+        + aBoard.getStringMap());
     int limit = aBoard.getEstimatedValue();
     boolean returnedResult = false;
     this.result = false;
@@ -600,17 +608,19 @@ public class Execute {
       if (this.result)
         break;
       limit += 2;
-      //System.out.println("best: "+ this.bestScoreBoard.getStringMap());
-      //System.out.println("mask: "+ Long.toBinaryString(this.bestScoreBoard.mask65));
-      //System.out.println("scor: "+ Long.toBinaryString(this.bestScoreBoard.score()));
-      //System.out.println("goal: "+ aBoard.getGoal());
+      // System.out.println("best: "+ this.bestScoreBoard.getStringMap());
+      // System.out.println("mask: "+
+      // Long.toBinaryString(this.bestScoreBoard.mask65));
+      // System.out.println("scor: "+
+      // Long.toBinaryString(this.bestScoreBoard.score()));
+      // System.out.println("goal: "+ aBoard.getGoal());
       aBoard = this.bestScoreBoard.clone();
-      
-      //3分立っていたら諦める
+
+      // 3分立っていたら諦める
       Calendar now = Calendar.getInstance();
       long current = now.getTimeInMillis();
-      if((current - start) > 60*3*1000/*3分*/){
-        System.out.println("id="+aBoard.id+ ":タイムアウト");
+      if ((current - start) > 60 * 3 * 1000/* 3分 */) {
+        System.out.println("id=" + aBoard.id + ":タイムアウト");
         break;
       }
     }
@@ -626,7 +636,7 @@ public class Execute {
       System.out.println("result: " + result2 + " string: "
           + this.resultStringBoard.getOperationHistory());
       return this.resultStringBoard.clone();
-    }else{
+    } else {
       return null;
     }
   }
@@ -680,6 +690,39 @@ public class Execute {
       Statement stmt = conn.createStatement();
       ResultSet rs =
           stmt.executeQuery("select * from results where operation IS NULL");
+
+      ArrayList<StringBoard> list = new ArrayList<StringBoard>();
+      for (ResultSet iterator = rs; iterator.next();) {
+        int id = rs.getInt(1);
+        int width = rs.getInt(2);
+        int height = rs.getInt(3);
+        String map = rs.getString(4);
+        StringBoard board = new StringBoard(id, height, width, map);
+        list.add(board);
+      }
+
+      conn.close();
+
+      return list;
+    } catch (Exception e) {
+      e.printStackTrace();
+      return null;
+    }
+  }
+
+  public ArrayList<StringBoard> getUnsolvedDataFromId(int idNum) {
+    Connection conn = null;
+
+    try {
+
+      Class.forName("org.sqlite.JDBC");
+
+      conn = DriverManager.getConnection("jdbc:sqlite:results.db");
+      Statement stmt = conn.createStatement();
+      ResultSet rs =
+          stmt
+              .executeQuery("select * from results where operation IS NULL AND id >= "
+                  + idNum);
 
       ArrayList<StringBoard> list = new ArrayList<StringBoard>();
       for (ResultSet iterator = rs; iterator.next();) {
