@@ -28,7 +28,7 @@ import java.util.Queue;
 import java.util.concurrent.ThreadPoolExecutor.AbortPolicy;
 
 /**
- * スライドパズル TODO: ・ファイル読み込みとデータベース化 ・全パネル評価 ・操作ヒストリ ・操作数の集計 ・回答パネル管理 ・ファイル出力
+ * スライドパズル TODO:・全パネル評価 ・操作数の集計 ・回答パネル管理
  * 
  * @author "Yoshikazu Miyoshi <yoshikazum@gmail.com>"
  * 
@@ -42,12 +42,17 @@ public class Execute {
 
     Execute exe = new Execute();
     ArrayList<StringBoard> histories;
-    int idNum = 1176;
+    int idNum = 3639;
     // for (Iterator iterator = exe.getUnsolvedData().iterator(); iterator
     for (Iterator iterator = exe.getUnsolvedDataFromId(idNum).iterator(); iterator
         .hasNext();) {
       StringBoard board = (StringBoard) iterator.next();
-      StringBoard resultBoard = exe.solveOneBoard(board);
+      int limit = 150; // デフォルト200
+      if (!board.getOperationHistory().equalsIgnoreCase("")) {
+        // もし結果がnullでなければ回答の長さを取得し、それをリミットとする
+        limit = board.getOperationHistory().length();
+      }
+      StringBoard resultBoard = exe.solveOneBoard(board, limit);
       histories = new ArrayList<StringBoard>();
 
       if (resultBoard == null) {
@@ -55,8 +60,8 @@ public class Execute {
         continue;
       }
       if (!resultBoard.getOperationHistory().trim().equalsIgnoreCase("")) {
-        System.out.println("id: " + resultBoard.id + ", ope: "
-            + resultBoard.getOperationHistory());
+        System.out.println("id: " + resultBoard.id + ", opeLength: "
+            + resultBoard.getOperationHistory().length());
         exe.updateOperation(resultBoard.id, resultBoard.getOperationHistory());
       } else {
         System.out.println("failed");
@@ -220,7 +225,8 @@ public class Execute {
 
   public void writeToFile(String filePath) {
 
-    ArrayList<StringBoard> allresults = this.getAllDataFromDB();
+    // ArrayList<StringBoard> allresults = this.getAllDataFromDB();
+    ArrayList<StringBoard> allresults = this.getAnswerableAllData();
 
     BufferedWriter fileWriter = null;
     try {
@@ -277,7 +283,7 @@ public class Execute {
     StringBoard map = aBoard.clone();
     exeQueue = new MapQueue();
     exeQueue.offer(map);
-    searchedMap = new Hashtable<Integer, StringBoard>();
+    searchedMap = new HashMap<Integer, StringBoard>();
 
     StringBoard result = null;
     lowestCostBoard = aBoard.clone();
@@ -319,7 +325,7 @@ public class Execute {
       } catch (CloneNotSupportedException e) {
         e.printStackTrace();
       }
-      searchedMap = new Hashtable<Integer, StringBoard>();
+      searchedMap = new HashMap<Integer, StringBoard>();
       searchedMap.put(new Integer(oldMap.hashCode()), oldMap);
       j++;
     }
@@ -330,7 +336,7 @@ public class Execute {
   }
 
   MapQueue exeQueue;
-  Hashtable<Integer, StringBoard> searchedMap;
+  HashMap<Integer, StringBoard> searchedMap;
   StringBoard lowestCostBoard;
 
   public StringBoard solveMap(StringBoard aBoard, int limit) {
@@ -407,7 +413,7 @@ public class Execute {
           continue;
 
         int hash = hashMap.hashCode();
-        boolean alreadySearched = searchedMap.contains(hash);
+        boolean alreadySearched = searchedMap.containsKey(hash);
 
         if (alreadySearched) {
           continue;
@@ -449,14 +455,15 @@ public class Execute {
   public boolean solveDepth(
       int i,
       StringBoard aBoard,
-      HashMap<Integer, StringBoard> history,
+      HashMap<Integer, Integer> history,
       int limit) {
     // System.out.print(".");
     String goal = aBoard.getGoal();
     StringBoard goalMap = new StringBoard(aBoard.height, aBoard.width, goal);
 
-    if (this.result)// すでに発見していたら処理しない
+    if (this.result){// すでに発見していたら処理しない
       return true;
+    }
     // System.out.println("test: "+ aBoard.getStringMap()+
     // ", goal: "+goalMap.getStringMap());
     if (aBoard.compareTo(aBoard)) {
@@ -468,7 +475,7 @@ public class Execute {
 
     if (i > limit) {
       // System.out.println(aBoard.getOperationHistory());
-      // System.out.println("over 60");
+      //System.out.println("limited");
       // System.out.print(".");
       this.resultStringBoard = null;
       return false;
@@ -535,7 +542,9 @@ public class Execute {
           continue;
         }
 
-        if (history.containsKey(nextBoard.hashCode())) {
+        // 同じ盤面を見つけても深さが浅い場合はパスしない
+        if (history.containsKey(nextBoard.hashCode())
+            && history.get(nextBoard.hashCode()) < i) {
 
         } else {
 
@@ -582,7 +591,7 @@ public class Execute {
         if (index < 0 || index == 999)
           continue;
         StringBoard stringBoard = boardArray[index];
-        history.put(new Integer(stringBoard.hashCode()), stringBoard);
+        history.put(new Integer(stringBoard.hashCode()), i);
         solveDepth(++i, stringBoard, history, limit);
       }
     }
@@ -590,30 +599,24 @@ public class Execute {
     return false;
   }
 
-  public StringBoard solveOneBoard(StringBoard aBoard) {
+  public StringBoard solveOneBoard(StringBoard aBoard, int maxLimit) {
     this.bestScoreBoard = aBoard.clone();
-    HashMap<Integer, StringBoard> history;
+    HashMap<Integer, Integer> history;
     System.out.println("solving: " + aBoard.width + "x" + aBoard.height + ": "
-        + aBoard.getStringMap());
+        + aBoard.getStringMap()+ ", estimatedValue: "+aBoard.getEstimatedValue());
     int limit = aBoard.getEstimatedValue();
     boolean returnedResult = false;
     this.result = false;
     this.resultStringBoard = aBoard;
     Calendar calendar = Calendar.getInstance();
     long start = calendar.getTimeInMillis();
-    while (limit < 200) {
-      // System.out.println("limit: "+limit);
-      history = new HashMap<Integer, StringBoard>();
+    while (limit < maxLimit) {
+      history = new HashMap<Integer, Integer>();
+      System.out.print(".");
       returnedResult = this.solveDepth(0, aBoard, history, limit);
       if (this.result)
         break;
       limit += 2;
-      // System.out.println("best: "+ this.bestScoreBoard.getStringMap());
-      // System.out.println("mask: "+
-      // Long.toBinaryString(this.bestScoreBoard.mask65));
-      // System.out.println("scor: "+
-      // Long.toBinaryString(this.bestScoreBoard.score()));
-      // System.out.println("goal: "+ aBoard.getGoal());
       aBoard = this.bestScoreBoard.clone();
 
       // 3分立っていたら諦める
@@ -624,7 +627,7 @@ public class Execute {
         break;
       }
     }
-    history = new HashMap<Integer, StringBoard>();
+    history = new HashMap<Integer, Integer>();
 
     if (this.resultStringBoard == null)
       return null;
@@ -743,6 +746,102 @@ public class Execute {
     }
   }
 
+  public ArrayList<StringBoard> getAnswerableAllData() {
+    Connection conn = null;
+
+    try {
+
+      Class.forName("org.sqlite.JDBC");
+
+      conn = DriverManager.getConnection("jdbc:sqlite:results.db");
+      Statement stmt = conn.createStatement();
+      ResultSet rs = stmt.executeQuery("select * from results;");
+
+      ArrayList<StringBoard> list = new ArrayList<StringBoard>();
+      for (ResultSet iterator = rs; iterator.next();) {
+        int id = rs.getInt(1);
+        int width = rs.getInt(2);
+        int height = rs.getInt(3);
+        String map = rs.getString(4);
+        StringBoard board = new StringBoard(id, height, width, map);
+        if (rs.getString(5) != null)
+          board.setOperationHistory(rs.getString(5));
+        list.add(board);
+      }
+
+      // 回答文字列が少ない順にソートする
+      Collections.sort(list, new Comparator<StringBoard>() {
+
+        @Override
+        public int compare(StringBoard o1, StringBoard o2) {
+          int num1 = o1.getOperationHistory().length();
+          int num2 = o2.getOperationHistory().length();
+          return num1 - num2;
+        }
+      });
+
+      int countL = 0;
+      int countR = 0;
+      int countU = 0;
+      int countD = 0;
+
+      // 72187 81749 72303 81778
+      int LX = 72187;
+      int RX = 81749;
+      int UX = 72303;
+      int DX = 72303;
+
+      int answeredCount = 0;
+      // 始めの回答から文字列をカウントし、制限を超えたら後はlistから外す
+      ArrayList<StringBoard> newList = new ArrayList<StringBoard>();
+      for (Iterator<StringBoard> iterator = list.iterator(); iterator.hasNext();) {
+        StringBoard stringBoard = (StringBoard) iterator.next();
+
+        char[] chars = stringBoard.getOperationHistory().toCharArray();
+        for (int i = 0; i < chars.length; i++) {
+          char c = chars[i];
+          if (c == 'L')
+            countL++;
+          if (c == 'R')
+            countR++;
+          if (c == 'U')
+            countU++;
+          if (c == 'D')
+            countD++;
+        }
+
+        if (LX < countL || RX < countR || UX < countU || DX < countD) {
+          // 文字列制限超えていたら空文字を入れる
+          stringBoard.setOperationHistory("");
+        } else {
+          // 答えられる回答をカウントする
+          if (stringBoard.getOperationHistory().length() != 0)
+            answeredCount++;
+        }
+        newList.add(stringBoard);
+      }
+      System.out.println("AnsweredCount: " + answeredCount);
+
+      // 元のid順に整列させる
+      Collections.sort(newList, new Comparator<StringBoard>() {
+
+        @Override
+        public int compare(StringBoard o1, StringBoard o2) {
+          int num1 = o1.id;
+          int num2 = o2.id;
+          return num1 - num2;
+        }
+      });
+
+      conn.close();
+
+      return newList;
+    } catch (Exception e) {
+      e.printStackTrace();
+      return null;
+    }
+  }
+
   public ArrayList<StringBoard> getAllDataFromDB() {
     Connection conn = null;
 
@@ -796,5 +895,48 @@ public class Execute {
       e.printStackTrace();
       return false;
     }
+  }
+
+  public int[] countAnswer() {
+    Connection conn = null;
+    try {
+      Class.forName("org.sqlite.JDBC");
+
+      conn = DriverManager.getConnection("jdbc:sqlite:results.db");
+      Statement stmt = conn.createStatement();
+
+      ResultSet rs = stmt.executeQuery("select * from results;");
+
+      int countL = 0;
+      int countR = 0;
+      int countU = 0;
+      int countD = 0;
+      int countAnsered = 0;
+      for (ResultSet iterator = rs; iterator.next();) {
+        String operation = rs.getString(5);
+        if (operation == null)
+          continue;
+        char[] chars = operation.toCharArray();
+        for (int i = 0; i < chars.length; i++) {
+          char c = chars[i];
+          if (c == 'L')
+            countL++;
+          if (c == 'R')
+            countR++;
+          if (c == 'U')
+            countU++;
+          if (c == 'D')
+            countD++;
+        }
+        countAnsered++;
+      }
+      conn.close();
+      int[] counters = { countL, countR, countU, countD, countAnsered };
+      return counters;
+
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+    return null;
   }
 }

@@ -36,7 +36,7 @@ public class ExecuteTest extends TestCase {
     exe = new Execute();
 
     String filePath = "problems.txt";
-    //exe.readInputFile(filePath);
+    // exe.readInputFile(filePath);
   }
 
   protected void setUp() throws Exception {
@@ -128,40 +128,34 @@ public class ExecuteTest extends TestCase {
     result = aBoard.compareTo(goal2);
     assertFalse(result);
   }
-  
-  public void testSolveOneBoard(){
-    StringBoard aBoard = new StringBoard(0, 5, 3, "5163E9=B084CAD2");
-    StringBoard resultBoard = exe.solveOneBoard(aBoard);
 
-    if (resultBoard != null) {
-      System.out.println("id: " + resultBoard.id + ", ope: "
-          + resultBoard.getOperationHistory());
-      exe.updateOperation(resultBoard.id, resultBoard.getOperationHistory());
-    }else{
-      System.out.println("failed");
-    }
-    assertTrue(exe.result);
+  public void testSolveOneBoard() {
+    /*
+     * StringBoard aBoard = new StringBoard(0, 5, 3, "5163E9=B084CAD2");
+     * StringBoard resultBoard = exe.solveOneBoard(aBoard);
+     * 
+     * if (resultBoard != null) { System.out.println("id: " + resultBoard.id +
+     * ", ope: " + resultBoard.getOperationHistory());
+     * exe.updateOperation(resultBoard.id, resultBoard.getOperationHistory());
+     * }else{ System.out.println("failed"); } assertTrue(exe.result);
+     */
   }
 
   public void testSolveDepth() {
-    HashMap<Integer, StringBoard> history = new HashMap<Integer, StringBoard>();
-    StringBoard aBoard = new StringBoard(0, 5, 3, "5163E9=B084CAD2");
-    //StringBoard aBoard = new StringBoard(0, 3, 3, "168452=30");
-    System.out.println("estimatedValue: " + aBoard.getEstimatedValue());
-    int limit = aBoard.getEstimatedValue();
-    boolean returnedResult = false;
-    while (limit < 200/*aBoard.getEstimatedValue() * 2*/) {
-      // System.out.println("limit: "+limit);
-      returnedResult = exe.solveDepth(0, aBoard, history, limit);
-      if (exe.result)
-        break;
-      limit += 2;
-      history = new HashMap<Integer, StringBoard>();
-      //System.out.println("best; "+ exe.bestScoreBoard.getStringMap());
-      //System.out.println("goal: "+ aBoard.getGoal());
-      aBoard = exe.bestScoreBoard;
-    }
-    assertTrue(exe.result);
+    /*
+     * HashMap<Integer, StringBoard> history = new HashMap<Integer,
+     * StringBoard>(); StringBoard aBoard = new StringBoard(0, 5, 3,
+     * "5163E9=B084CAD2"); //StringBoard aBoard = new StringBoard(0, 3, 3,
+     * "168452=30"); System.out.println("estimatedValue: " +
+     * aBoard.getEstimatedValue()); int limit = aBoard.getEstimatedValue();
+     * boolean returnedResult = false; while (limit < 200) { //
+     * aBoard.getEstimatedValue() * 2 // System.out.println("limit: "+limit);
+     * returnedResult = exe.solveDepth(0, aBoard, history, limit); if
+     * (exe.result) break; limit += 2; history = new HashMap<Integer,
+     * StringBoard>(); //System.out.println("best; "+
+     * exe.bestScoreBoard.getStringMap()); //System.out.println("goal: "+
+     * aBoard.getGoal()); aBoard = exe.bestScoreBoard; } assertTrue(exe.result);
+     */
   }
 
   public void testSolve() {
@@ -194,16 +188,31 @@ public class ExecuteTest extends TestCase {
 
     for (Iterator iterator = list.iterator(); iterator.hasNext();) {
       StringBoard stringBoard = (StringBoard) iterator.next();
-      //System.out.println("id:"+ stringBoard.id+", w:" + stringBoard.width + ", h:" + stringBoard.height
-      //    + ", map:" + stringBoard.getStringMap());
+      // System.out.println("id:"+ stringBoard.id+", w:" + stringBoard.width +
+      // ", h:" + stringBoard.height
+      // + ", map:" + stringBoard.getStringMap());
     }
-    
+
     assertNotNull(list);
   }
-  
-  public void testUpdateOperation(){
-    //boolean condition = exe.updateOperation(1, "hogehoge");
-    //assertTrue(condition);
+
+  public void testUpdateOperation() {
+    // boolean condition = exe.updateOperation(1, "hogehoge");
+    // assertTrue(condition);
+  }
+
+  public void testCountAnswer() {
+    // 72187 81749 72303 81778
+    // 5000
+    int[] answers = exe.countAnswer();
+    float remainAnswer = (float) answers[4] / 5000 * 100;
+    float remainL = (float) answers[0] / 72187 * 100;
+    float remainR = (float) answers[1] / 81749 * 100;
+    float remainU = (float) answers[2] / 72303 * 100;
+    float remainD = (float) answers[3] / 81778 * 100;
+    System.out.println("Answerd: "+ answers[4]+ "(" + remainAnswer + "%), L:" + answers[0] + "(" + remainL + "%), R:"
+        + answers[1] + "(" + remainR + "%), U:" + answers[2] + "(" + remainU
+        + "%), D:" + answers[3] + "(" + remainD + "%)");
   }
 
 }
