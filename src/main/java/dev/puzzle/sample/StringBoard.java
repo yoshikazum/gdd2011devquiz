@@ -3,6 +3,7 @@
  */
 package dev.puzzle.sample;
 
+import java.util.Comparator;
 import java.util.HashMap;
 
 /**
@@ -19,6 +20,7 @@ public class StringBoard {
   private String operationHistory;
   private int zeroIndex;
   private int estimatedValue;
+  private int sequenceValue;
 
   public StringBoard() {
     width = 0;
@@ -29,8 +31,9 @@ public class StringBoard {
     operationHistory = "";
     zeroIndex = -1;
     estimatedValue = 99999;
+    sequenceValue = 99999;
   }
-  
+
   public StringBoard(int id, int height, int width, String stringMap) {
     this.id = id;
     this.height = height;
@@ -41,6 +44,7 @@ public class StringBoard {
     zeroIndex = stringMap.indexOf("0");
     operationHistory = "";
     estimatedValue = calculateValue();
+    sequenceValue = calculateSequenseScore();
   }
 
   public StringBoard(int height, int width, String stringMap) {
@@ -52,6 +56,7 @@ public class StringBoard {
     zeroIndex = stringMap.indexOf("0");
     operationHistory = "";
     estimatedValue = calculateValue();
+    sequenceValue = calculateSequenseScore();
   }
 
   public StringBoard clone() {
@@ -161,7 +166,7 @@ public class StringBoard {
   }
 
   public StringBoard operate(int operation) throws CloneNotSupportedException {
-    //System.out.println("w:"+ width+ " h:"+ height);
+    // System.out.println("w:"+ width+ " h:"+ height);
     char tmp = '-';
     char[] chars = this.stringMap.toCharArray();
     int n = 0;
@@ -180,8 +185,8 @@ public class StringBoard {
     chars[zeroIndex] = chars[zeroIndex + n];
     chars[zeroIndex + n] = tmp;
     int newZeroIndex = zeroIndex + n;
-    
-    //System.out.println(this.stringMap+ "->"+ new String(chars));
+
+    // System.out.println(this.stringMap+ "->"+ new String(chars));
     StringBoard returnStringBoard =
         new StringBoard(this.id, this.height, this.width, new String(chars));
 
@@ -230,163 +235,93 @@ public class StringBoard {
     HashMap<Integer, Integer> gMap =
         Board.mapFromString(height, width, this.goalMap);
     return Board.estimateMap(hMap, gMap);
-   }
+  }
 
-  final long mask33 = Long.parseLong(
-      "111" +
-  		"000" +
-  		"000" +
-  		"000000000000000000000000000", 2);
-  final long mask34 = Long.parseLong(
-      "111" +
-      "111" +
-      "000" +
-      "000" +
-      "000000000000000000000000", 2);
-  final long mask35 = Long.parseLong(
-      "111" +
-      "111" +
-      "111" +
-      "000" +
-      "000" +
-      "000000000000000000000", 2);
-  final long mask36 = Long.parseLong(
-      "111" +
-      "111" +
-      "111" +
-      "111" +
-      "000" +
-      "000" +
-      "000000000000000000", 2);
-  final long mask43 = Long.parseLong(
-      "1111" +
-      "0000" +
-      "0000" +
-      "000000000000000000000000", 2);
-  final long mask44 = Long.parseLong(
-      "1111" +
-      "1111" +
-      "1000" +
-      "1000" +
-      "00000000000000000000", 2);
-  final long mask45 = Long.parseLong(
-      "1111" +
-      "1111" +
-      "1111" +
-      "1000" +
-      "1000" +
-      "0000000000000000", 2);
-  final long mask46 = Long.parseLong(
-      "1111" +
-      "1111" +
-      "1111" +
-      "1111" +
-      "1000" +
-      "1000" +
-      "000000000000", 2);
-  final long mask53 = Long.parseLong(
-      "11111" +
-      "11000" +
-      "11000" +
-      "100000000000000000000", 2);
-  final long mask54 = Long.parseLong(
-      "11111" +
-      "11111" +
-      "10000" +
-      "10000" +
-      "0000000000000000", 2);
-  final long mask55 = Long.parseLong(
-      "11111" +
-      "11111" +
-      "11111" +
-      "11000" +
-      "11000" +
-      "00000000000", 2);
-  final long mask56 = Long.parseLong(
-      "11111" +
-      "11111" +
-      "11111" +
-      "11111" +
-      "11000" +
-      "11000" +
-      "000000", 2);
-  final long mask63 = Long.parseLong(
-      "111111" +
-      "111000" +
-      "111000" +
-      "000000000000000000", 2);
-  final long mask64 = Long.parseLong(
-      "111111" +
-      "110000" +
-      "110000" +
-      "110000" +
-      "000000000000", 2);
-  final long mask65 = Long.parseLong(
-      "111111" +
-      "110000" +
-      "110000" +
-      "110000" +
-      "110000" +
-      "000000", 2);
-  final long mask66 = Long.parseLong(
-      "111111" +
-      "111111" +
-      "111111" +
-      "110000" +
-      "110000" +
-      "110000", 2);
-  public long score(){
+  final long mask33 = Long.parseLong("111" + "000" + "000"
+      + "000000000000000000000000000", 2);
+  final long mask34 = Long.parseLong("111" + "111" + "000" + "000"
+      + "000000000000000000000000", 2);
+  final long mask35 = Long.parseLong("111" + "111" + "111" + "000" + "000"
+      + "000000000000000000000", 2);
+  final long mask36 = Long.parseLong("111" + "111" + "111" + "111" + "000"
+      + "000" + "000000000000000000", 2);
+  final long mask43 = Long.parseLong("1111" + "0000" + "0000"
+      + "000000000000000000000000", 2);
+  final long mask44 = Long.parseLong("1111" + "1111" + "1000" + "1000"
+      + "00000000000000000000", 2);
+  final long mask45 = Long.parseLong("1111" + "1111" + "1111" + "1000" + "1000"
+      + "0000000000000000", 2);
+  final long mask46 = Long.parseLong("1111" + "1111" + "1111" + "1111" + "1000"
+      + "1000" + "000000000000", 2);
+  final long mask53 = Long.parseLong("11111" + "11000" + "11000"
+      + "100000000000000000000", 2);
+  final long mask54 = Long.parseLong("11111" + "11111" + "10000" + "10000"
+      + "0000000000000000", 2);
+  final long mask55 = Long.parseLong("11111" + "11111" + "11111" + "11000"
+      + "11000" + "00000000000", 2);
+  final long mask56 = Long.parseLong("11111" + "11111" + "11111" + "11111"
+      + "11000" + "11000" + "000000", 2);
+  final long mask63 = Long.parseLong("111111" + "111000" + "111000"
+      + "000000000000000000", 2);
+  final long mask64 = Long.parseLong("111111" + "110000" + "110000" + "110000"
+      + "000000000000", 2);
+  final long mask65 = Long.parseLong("111111" + "110000" + "110000" + "110000"
+      + "110000" + "000000", 2);
+  final long mask66 = Long.parseLong("111111" + "111111" + "111111" + "110000"
+      + "110000" + "110000", 2);
+
+  public long score() {
     char[] current = this.stringMap.toCharArray();
-    char[] goal    = this.goalMap.toCharArray();
-    
+    char[] goal = this.goalMap.toCharArray();
+
     long score = 0;
     long value = 1;
     boolean nocount = false;
     for (int i = 0; i < goal.length; i++) {
-      if(current[i]=='=' || current[i]=='0')
+      if (current[i] == '=' || current[i] == '0')
         continue;
-      if(current[i] == goal[i] && !nocount){
-        score += value << (35-i);
-      }else{
+      if (current[i] == goal[i] && !nocount) {
+        score += value << (35 - i);
+      } else {
         nocount = true;
       }
     }
-    
-    //行列によってスコアマスクを変更する
-    if(width==3 && height==3){
+
+    // 行列によってスコアマスクを変更する
+    if (width == 3 && height == 3) {
       score = score & mask33;
-    }else if(width==3 && height==4){
+    } else if (width == 3 && height == 4) {
       score = score & mask34;
-    }else if(width==3 && height==5){
+    } else if (width == 3 && height == 5) {
       score = score & mask35;
-    }else if(width==3 && height==6){
+    } else if (width == 3 && height == 6) {
       score = score & mask36;
-    }else if(width==4 && height==3){
+    } else if (width == 4 && height == 3) {
       score = score & mask43;
-    }else if(width==4 && height==4){
+    } else if (width == 4 && height == 4) {
       score = score & mask44;
-    }else if(width==4 && height==5){
+    } else if (width == 4 && height == 5) {
       score = score & mask45;
-    }else if(width==4 && height==6){
+    } else if (width == 4 && height == 6) {
       score = score & mask46;
-    }else if(width==5 && height==3){
+    } else if (width == 5 && height == 3) {
       score = score & mask53;
-    }else if(width==5 && height==4){
+    } else if (width == 5 && height == 4) {
       score = score & mask54;
-    }else if(width==5 && height==5){
+    } else if (width == 5 && height == 5) {
       score = score & mask55;
-    }else if(width==5 && height==6){
+    } else if (width == 5 && height == 6) {
       score = score & mask56;
-    }else if(width==6 && height==3){
+    } else if (width == 6 && height == 3) {
       score = score & mask63;
-    }else if(width==6 && height==4){
+    } else if (width == 6 && height == 4) {
       score = score & mask64;
-    }else if(width==6 && height==5){
+    } else if (width == 6 && height == 5) {
       score = score & mask65;
-    }else if(width==6 && height==6){
+    } else if (width == 6 && height == 6) {
       score = score & mask66;
     }
-    
+
     return score;
   }
 
@@ -394,23 +329,66 @@ public class StringBoard {
     return estimatedValue;
   }
 
+  public int calculateSequenseScore() {
+
+    /*
+    char[] current = this.stringMap.toCharArray();
+    char[] goal = this.goalMap.toCharArray();
+
+    int score = 0;
+    int value = 1;
+    for (int i = 0; i < goal.length; i++) {
+      int j = i + 1;
+      if (current[i] == '=' || current[i] == '0')
+        continue;
+      if (j >= goal.length)
+        continue;
+      if (current[j] != goal[j] && current[j] != '=') {
+        score += 1;
+      }
+    }
+    int scoreW = (this.width - 2);
+    int scoreH = (this.height - 2);
+    score += (scoreH * scoreW);
+    */
+
+    int fn =
+        this.getOperationHistory().length() * 3 + this.estimatedValue * 4; //56
+        //this.getOperationHistory().length() * 5 + this.estimatedValue * 7; //56
+        //this.getOperationHistory().length() * 1 + this.estimatedValue * 2;   //60 早い
+        //this.getOperationHistory().length() * 2 + this.estimatedValue * 3;   //58
+        //this.getOperationHistory().length() * 1 + this.estimatedValue * 3;   //70 早い
+        //this.getOperationHistory().length() * 1 + this.estimatedValue * 3;   //70 早い
+        //this.getOperationHistory().length() * 3 + this.estimatedValue * 1;   //遅い
+        //this.getOperationHistory().length() * 2 + this.estimatedValue * 1;   //遅い
+        //this.getOperationHistory().length() * 1 + this.estimatedValue * 4;   //82早い
+        //this.getOperationHistory().length() * 3 + this.estimatedValue * 5;   //58早い
+        //this.getOperationHistory().length() + score*3;
+    return fn;
+  }
+
   public int getLastOperation() {
     int index = this.operationHistory.length() - 1;
-    if(index<0)return 0;
+    if (index < 0)
+      return 0;
     char[] string = this.operationHistory.toCharArray();
     char operation = string[index];
-    
+
     int result = 0;
-    if(operation == 'L'){
+    if (operation == 'L') {
       result = COMMAND_R;
-    }else if(operation == 'R'){
+    } else if (operation == 'R') {
       result = COMMAND_L;
-    }else if(operation == 'U'){
+    } else if (operation == 'U') {
       result = COMMAND_D;
-    }else{
+    } else {
       result = COMMAND_U;
     }
-    
+
     return result;
+  }
+
+  public int sequenceValue() {
+    return sequenceValue;
   }
 }

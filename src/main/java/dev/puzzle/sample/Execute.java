@@ -24,11 +24,15 @@ import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.PriorityQueue;
 import java.util.Queue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor.AbortPolicy;
+import java.util.concurrent.TimeUnit;
 
 /**
- * スライドパズル TODO:・全パネル評価 ・操作数の集計 ・回答パネル管理
+ * スライドパズル
  * 
  * @author "Yoshikazu Miyoshi <yoshikazum@gmail.com>"
  * 
@@ -39,32 +43,82 @@ public class Execute {
 
   public static void main(String[] args) {
     System.out.println("main");
-
+    int idNum = 1;
     Execute exe = new Execute();
-    ArrayList<StringBoard> histories;
-    int idNum = 3639;
-    // for (Iterator iterator = exe.getUnsolvedData().iterator(); iterator
-    for (Iterator iterator = exe.getUnsolvedDataFromId(idNum).iterator(); iterator
+    ExecutorService exec = Executors.newFixedThreadPool(2);
+    for (Iterator iterator = exe.getSolvedDataFromId(idNum).iterator(); iterator
         .hasNext();) {
       StringBoard board = (StringBoard) iterator.next();
-      int limit = 150; // デフォルト200
-      if (!board.getOperationHistory().equalsIgnoreCase("")) {
-        // もし結果がnullでなければ回答の長さを取得し、それをリミットとする
-        limit = board.getOperationHistory().length();
-      }
-      StringBoard resultBoard = exe.solveOneBoard(board, limit);
-      histories = new ArrayList<StringBoard>();
+      exec.execute(new Executor(board, exe));
+    }
+    
+    exec.shutdown();
+    try {
+      exec.awaitTermination(Long.MAX_VALUE, TimeUnit.SECONDS);
+    } catch (InterruptedException e) {
+      // TODO 自動生成された catch ブロック
+      e.printStackTrace();
+    }
+  }
 
-      if (resultBoard == null) {
-        System.out.println("failed");
-        continue;
+  public static void AStar() {
+    Execute exe = new Execute();
+    int idNum = 4600;
+    for (Iterator iterator = exe.getSolvedDataFromId(idNum).iterator(); iterator
+        .hasNext();) {
+      StringBoard board = (StringBoard) iterator.next();
+      StringBoard result = exe.solveByAStar(board);
+      try {
+        System.out.println("AStar id:"+ board.id+ " length:"
+            + result.getOperationHistory().length() + " result: "
+            + result.getOperationHistory());
+        StringBoard storedBoard = exe.getBoardFromId(board.id);
+        if (storedBoard.getOperationHistory().length() == 0 ||
+            storedBoard.getOperationHistory().length() > 
+            result.getOperationHistory().length()) {
+          exe.updateOperation(board.id, result.getOperationHistory());
+          System.out.println("stored History");
+        }
+
+      } catch (Exception e) {
+        System.out.println("id: "+board.id+ " Exception occered!!");
       }
-      if (!resultBoard.getOperationHistory().trim().equalsIgnoreCase("")) {
-        System.out.println("id: " + resultBoard.id + ", opeLength: "
-            + resultBoard.getOperationHistory().length());
-        exe.updateOperation(resultBoard.id, resultBoard.getOperationHistory());
-      } else {
-        System.out.println("failed");
+    }
+  }
+
+  public static void DFS() {
+    Execute exe = new Execute();
+    ArrayList<StringBoard> histories;
+    int idNum = 1;
+    // for (Iterator iterator = exe.getUnsolvedData().iterator(); iterator
+    // for (Iterator iterator = exe.getUnsolvedDataFromId(idNum).iterator();
+    // iterator
+    while (true) {
+      for (Iterator iterator = exe.getSolvedDataFromId(idNum).iterator(); iterator
+          .hasNext();) {
+        StringBoard board = (StringBoard) iterator.next();
+        int limit = 400; // デフォルト200
+        if (!board.getOperationHistory().equalsIgnoreCase("")) {
+          // もし結果がnullでなければ回答の長さを取得し、それをリミットとする
+          limit = board.getOperationHistory().length();
+        }
+        StringBoard resultBoard = exe.solveOneBoard(board, limit);
+        histories = new ArrayList<StringBoard>();
+
+        if (resultBoard == null) {
+          System.out.println("failed");
+          continue;
+        }
+        if (!resultBoard.getOperationHistory().trim().equalsIgnoreCase("")) {
+          System.out.println("id: " + resultBoard.id + ", opeLength: "
+              + resultBoard.getOperationHistory().length());
+          exe
+              .updateOperation(
+                  resultBoard.id,
+                  resultBoard.getOperationHistory());
+        } else {
+          System.out.println("failed");
+        }
       }
     }
   }
@@ -452,7 +506,7 @@ public class Execute {
   private StringBoard resultStringBoard;
   StringBoard bestScoreBoard;
 
-  public boolean solveDepth(
+  public void solveDepth(
       int i,
       StringBoard aBoard,
       HashMap<Integer, Integer> history,
@@ -461,8 +515,8 @@ public class Execute {
     String goal = aBoard.getGoal();
     StringBoard goalMap = new StringBoard(aBoard.height, aBoard.width, goal);
 
-    if (this.result){// すでに発見していたら処理しない
-      return true;
+    if (this.result) {// すでに発見していたら処理しない
+      return;
     }
     // System.out.println("test: "+ aBoard.getStringMap()+
     // ", goal: "+goalMap.getStringMap());
@@ -470,15 +524,15 @@ public class Execute {
       // System.out.println("result: " + aBoard.getOperationHistory());
       this.result = true;
       this.resultStringBoard = aBoard.clone();
-      return true;
+      return;
     }
 
-    if (i > limit) {
+    if (i > limit - 10) {
       // System.out.println(aBoard.getOperationHistory());
-      //System.out.println("limited");
+      // System.out.println("limited");
       // System.out.print(".");
       this.resultStringBoard = null;
-      return false;
+      // return false;
     } else {
 
       int operationList = aBoard.getOperableList();
@@ -596,14 +650,16 @@ public class Execute {
       }
     }
     // this.resultStringBoard = null;
-    return false;
+    // return false;
   }
 
   public StringBoard solveOneBoard(StringBoard aBoard, int maxLimit) {
     this.bestScoreBoard = aBoard.clone();
     HashMap<Integer, Integer> history;
     System.out.println("solving: " + aBoard.width + "x" + aBoard.height + ": "
-        + aBoard.getStringMap()+ ", estimatedValue: "+aBoard.getEstimatedValue());
+        + aBoard.getStringMap() + ", estimatedValue: "
+        + aBoard.getEstimatedValue() + ", size: "
+        + aBoard.getOperationHistory().length());
     int limit = aBoard.getEstimatedValue();
     boolean returnedResult = false;
     this.result = false;
@@ -613,10 +669,10 @@ public class Execute {
     while (limit < maxLimit) {
       history = new HashMap<Integer, Integer>();
       System.out.print(".");
-      returnedResult = this.solveDepth(0, aBoard, history, limit);
+      this.solveDepth(0, aBoard, history, limit);
       if (this.result)
         break;
-      limit += 2;
+      limit += 1;
       aBoard = this.bestScoreBoard.clone();
 
       // 3分立っていたら諦める
@@ -642,6 +698,96 @@ public class Execute {
     } else {
       return null;
     }
+  }
+
+  public StringBoard solveByAStar(StringBoard aBoard) {
+    PriorityQueue<StringBoard> open =
+        new PriorityQueue<StringBoard>(1, new StringComparator());
+    HashMap<Integer, StringBoard> closed = new HashMap<Integer, StringBoard>();
+    StringBoard copy = aBoard.clone();
+    open.add(copy);
+    int limit = 500;
+    String opeHistory = aBoard.getOperationHistory();
+    if(opeHistory!=null && opeHistory.length()!=0){
+      limit = opeHistory.length();
+    }
+
+    // 制限時間
+    Calendar calendar = Calendar.getInstance();
+    long start = calendar.getTimeInMillis();
+
+    while (!open.isEmpty()) {
+
+      // 10分立っていたら諦める
+      Calendar now = Calendar.getInstance();
+      long current = now.getTimeInMillis();
+      if ((current - start) > 60 * 10 * 1000/* 3分 */) {
+        System.out.println("id=" + aBoard.id + ":タイムアウト");
+        return null;
+      }
+
+      StringBoard n = open.poll(); //取り出し
+      closed.put(n.hashCode(), n);
+      if (n.compareTo(n)) {
+        return n;
+      }
+      
+
+      int operationList = n.getOperableList();
+      //operationList -= n.getLastOperation();
+      int operation = operationList;
+      for (int i = 0; i < 4; i++) {
+        if (operation % 2 != 1) {
+          operation = operation >> 1;
+          continue;
+        }
+        operation = operation >> 1;
+        StringBoard next = null;
+        try {
+          if (i == 0) {
+            next = n.operate(COMMAND_L);
+            next.setOperationHistory(n.getOperationHistory() + "L");
+          }
+          if (i == 1) {
+            next = n.operate(COMMAND_R);
+            next.setOperationHistory(n.getOperationHistory() + "R");
+          }
+          if (i == 2) {
+            next = n.operate(COMMAND_U);
+            next.setOperationHistory(n.getOperationHistory() + "U");
+          }
+          if (i == 3) {
+            next = n.operate(COMMAND_D);
+            next.setOperationHistory(n.getOperationHistory() + "D");
+          }
+        } catch (CloneNotSupportedException e) {
+          e.printStackTrace();
+        }
+        if (next == null)
+          continue;
+        
+        /*
+        int nextScore = next.getOperationHistory().length()+ next.getEstimatedValue();
+        if(nextScore > limit){
+          //System.out.println("next score:"+ nextScore);
+          //closed.put(next.hashCode(), next);
+          continue;
+        }*/
+
+        StringBoard past = closed.get(next.hashCode());
+        if (past != null) {
+          if (next.calculateSequenseScore() < past.calculateSequenseScore()) {
+            closed.remove(past.hashCode());
+            open.add(next);
+          } else {
+            continue;
+          }
+        } else {
+          open.add(next);
+        }
+      }
+    }
+    return null;
   }
 
   public void createDB() {
@@ -734,6 +880,39 @@ public class Execute {
         int height = rs.getInt(3);
         String map = rs.getString(4);
         StringBoard board = new StringBoard(id, height, width, map);
+        list.add(board);
+      }
+
+      conn.close();
+
+      return list;
+    } catch (Exception e) {
+      e.printStackTrace();
+      return null;
+    }
+  }
+
+  public ArrayList<StringBoard> getSolvedDataFromId(int idNum) {
+    Connection conn = null;
+
+    try {
+
+      Class.forName("org.sqlite.JDBC");
+
+      conn = DriverManager.getConnection("jdbc:sqlite:results.db");
+      Statement stmt = conn.createStatement();
+      ResultSet rs =
+          stmt.executeQuery("select * from results where id >= " + idNum);
+
+      ArrayList<StringBoard> list = new ArrayList<StringBoard>();
+      for (ResultSet iterator = rs; iterator.next();) {
+        int id = rs.getInt(1);
+        int width = rs.getInt(2);
+        int height = rs.getInt(3);
+        String map = rs.getString(4);
+        StringBoard board = new StringBoard(id, height, width, map);
+        String ope = (rs.getString(5) != null) ? rs.getString(5) : "";
+        board.setOperationHistory(ope);
         list.add(board);
       }
 
@@ -842,6 +1021,37 @@ public class Execute {
     }
   }
 
+  public StringBoard getBoardFromId(int id_) {
+    Connection conn = null;
+
+    try {
+
+      Class.forName("org.sqlite.JDBC");
+
+      conn = DriverManager.getConnection("jdbc:sqlite:results.db");
+      Statement stmt = conn.createStatement();
+      ResultSet rs = stmt.executeQuery("select * from results where id=" + id_);
+
+      if (rs == null)
+        return null;
+
+      int id = rs.getInt(1);
+      int width = rs.getInt(2);
+      int height = rs.getInt(3);
+      String map = rs.getString(4);
+      StringBoard board = new StringBoard(id, height, width, map);
+      if (rs.getString(5) != null)
+        board.setOperationHistory(rs.getString(5));
+
+      conn.close();
+      
+      return board;
+    } catch (Exception e) {
+      e.printStackTrace();
+      return null;
+    }
+  }
+
   public ArrayList<StringBoard> getAllDataFromDB() {
     Connection conn = null;
 
@@ -875,11 +1085,11 @@ public class Execute {
     }
   }
 
-  public boolean updateOperation(int id, String operation) {
+  synchronized public boolean  updateOperation(int id, String operation) {
     Connection conn = null;
 
     try {
-
+      wait();
       Class.forName("org.sqlite.JDBC");
 
       conn = DriverManager.getConnection("jdbc:sqlite:results.db");
@@ -889,10 +1099,11 @@ public class Execute {
           + "' where id = " + id);
 
       conn.close();
-
+      notifyAll();
       return true;
     } catch (Exception e) {
       e.printStackTrace();
+      notifyAll();
       return false;
     }
   }

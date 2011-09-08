@@ -130,15 +130,22 @@ public class ExecuteTest extends TestCase {
   }
 
   public void testSolveOneBoard() {
+
     /*
-     * StringBoard aBoard = new StringBoard(0, 5, 3, "5163E9=B084CAD2");
-     * StringBoard resultBoard = exe.solveOneBoard(aBoard);
+     * StringBoard aBoard = new StringBoard(0, 6, 6,
+     * "125RG=783M4=DPFLABY9K0=HXEJ=OI=QWTUZ");
+     * 
+     * //StringBoard aBoard = new StringBoard(0, 3, 3, "168452=30"); StringBoard
+     * resultBoard = null; int limit = 1; resultBoard =
+     * exe.solveOneBoard(aBoard,500);
      * 
      * if (resultBoard != null) { System.out.println("id: " + resultBoard.id +
-     * ", ope: " + resultBoard.getOperationHistory());
-     * exe.updateOperation(resultBoard.id, resultBoard.getOperationHistory());
-     * }else{ System.out.println("failed"); } assertTrue(exe.result);
+     * ", "+ resultBoard.getOperationHistory().length()+" ope: " +
+     * resultBoard.getOperationHistory()); exe.updateOperation(resultBoard.id,
+     * resultBoard.getOperationHistory()); } else {
+     * System.out.println("failed"); } assertTrue(exe.result);
      */
+
   }
 
   public void testSolveDepth() {
@@ -158,20 +165,15 @@ public class ExecuteTest extends TestCase {
      */
   }
 
-  public void testSolve() {
-    /*
-     * Board aBoard = new Board(0, 4, 3, "1624537890AB"); //Board aBoard = new
-     * Board(0, 3, 3, "123456708"); assertTrue(exe.solve(aBoard));
-     */
-
-    // StringBoard aBoard = new StringBoard(4, 3,"1624537890AB");
-    // StringBoard aBoard = new StringBoard(3, 3, "243108765");
-    /*
-     * StringBoard aBoard = new StringBoard(3, 3,"432587106");
-     * assertTrue(exe.solve(aBoard));
-     */
-
-    // exe.writeToFile("output.txt", exe.getHistories());
+  public void testSolveByAStar() {
+    // StringBoard aBoard = new StringBoard(0, 6, 5,
+    // "24A3=169P0=8=KJQ7=FEHGN=TMLCRS");
+    StringBoard aBoard = new StringBoard(0, 3, 6, "7D=0HG82C46B9F1E5A");
+    //StringBoard aBoard = new StringBoard(0, 3, 3, "168452=30");
+    StringBoard result = exe.solveByAStar(aBoard);
+    System.out.println("AStar length:" + result.getOperationHistory().length()
+        + " result: " + result.getOperationHistory());
+    assertNotNull(result);
   }
 
   public void testCreateDB() {
@@ -210,9 +212,10 @@ public class ExecuteTest extends TestCase {
     float remainR = (float) answers[1] / 81749 * 100;
     float remainU = (float) answers[2] / 72303 * 100;
     float remainD = (float) answers[3] / 81778 * 100;
-    System.out.println("Answerd: "+ answers[4]+ "(" + remainAnswer + "%), L:" + answers[0] + "(" + remainL + "%), R:"
-        + answers[1] + "(" + remainR + "%), U:" + answers[2] + "(" + remainU
-        + "%), D:" + answers[3] + "(" + remainD + "%)");
+    System.out.println("Answerd: " + answers[4] + "(" + remainAnswer + "%), L:"
+        + answers[0] + "(" + remainL + "%), R:" + answers[1] + "(" + remainR
+        + "%), U:" + answers[2] + "(" + remainU + "%), D:" + answers[3] + "("
+        + remainD + "%)");
   }
 
 }
