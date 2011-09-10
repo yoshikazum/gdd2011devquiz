@@ -3,6 +3,8 @@
  */
 package dev.puzzle.sample;
 
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Comparator;
 import java.util.HashMap;
 
@@ -118,56 +120,66 @@ public class StringBoard {
    * @return
    */
   public int getOperableList() {
-    int rightIndex = zeroIndex + 1;
-    int leftIndex = zeroIndex - 1;
-    int upIndex = zeroIndex - width;
-    int downIndex = zeroIndex + width;
+    try {
+      int rightIndex = zeroIndex + 1;
+      int leftIndex = zeroIndex - 1;
+      int upIndex = zeroIndex - width;
+      int downIndex = zeroIndex + width;
 
-    int stringSize = stringMap.length();
+      int stringSize = stringMap.length();
 
-    char rightChar = '-';
-    char leftChar = '-';
-    char upChar = '-';
-    char downChar = '-';
+      char rightChar = '-';
+      char leftChar = '-';
+      char upChar = '-';
+      char downChar = '-';
 
-    if ((rightIndex % width) == 0) {
-      rightChar = '=';
+      if ((rightIndex % width) == 0 || rightIndex >= stringSize) {
+        rightChar = '=';
+      }
+      if ((leftIndex % width) == width - 1 || leftIndex < 0) {
+        leftChar = '=';
+      }
+      if (upIndex < 0) {
+        upChar = '=';
+      }
+      if (downIndex >= stringSize) {
+        downChar = '=';
+      }
+
+      if (rightChar != '=') {
+        rightChar = this.stringMap.charAt(rightIndex);
+      }
+      if (leftChar != '=') {
+        leftChar = this.stringMap.charAt(leftIndex);
+      }
+      if (upChar != '=') {
+        upChar = this.stringMap.charAt(upIndex);
+      }
+      if (downChar != '=') {
+        downChar = this.stringMap.charAt(downIndex);
+      }
+
+      int operationList = 0;
+      if (rightChar != '=')
+        operationList += COMMAND_R;
+      if (leftChar != '=')
+        operationList += COMMAND_L;
+      if (upChar != '=')
+        operationList += COMMAND_U;
+      if (downChar != '=')
+        operationList += COMMAND_D;
+
+      return operationList;
+    } catch (Exception e) {
+      System.err.println("Exception!");
+      return 0;
     }
-    if ((leftIndex % width) == width - 1 || leftIndex < 0) {
-      leftChar = '=';
-    }
-    if (upIndex < 0) {
-      upChar = '=';
-    }
-    if (downIndex > stringSize - 1) {
-      downChar = '=';
-    }
-
-    if (rightChar != '=')
-      rightChar = this.stringMap.charAt(rightIndex);
-    if (leftChar != '=')
-      leftChar = this.stringMap.charAt(leftIndex);
-    if (upChar != '=')
-      upChar = this.stringMap.charAt(upIndex);
-    if (downChar != '=')
-      downChar = this.stringMap.charAt(downIndex);
-
-    int operationList = 0;
-    if (rightChar != '=')
-      operationList += COMMAND_R;
-    if (leftChar != '=')
-      operationList += COMMAND_L;
-    if (upChar != '=')
-      operationList += COMMAND_U;
-    if (downChar != '=')
-      operationList += COMMAND_D;
-
-    return operationList;
   }
 
   public StringBoard operate(int operation) throws CloneNotSupportedException {
     // System.out.println("w:"+ width+ " h:"+ height);
     char tmp = '-';
+    // System.out.println("operation:"+operation);
     char[] chars = this.stringMap.toCharArray();
     int n = 0;
     if ((operation & COMMAND_R) == COMMAND_R) {
@@ -330,8 +342,7 @@ public class StringBoard {
   }
 
   public int calculateSequenseScore() {
-
-    /*
+/*
     char[] current = this.stringMap.toCharArray();
     char[] goal = this.goalMap.toCharArray();
 
@@ -350,20 +361,21 @@ public class StringBoard {
     int scoreW = (this.width - 2);
     int scoreH = (this.height - 2);
     score += (scoreH * scoreW);
-    */
-
-    int fn =
-        this.getOperationHistory().length() * 3 + this.estimatedValue * 4; //56
-        //this.getOperationHistory().length() * 5 + this.estimatedValue * 7; //56
-        //this.getOperationHistory().length() * 1 + this.estimatedValue * 2;   //60 早い
-        //this.getOperationHistory().length() * 2 + this.estimatedValue * 3;   //58
-        //this.getOperationHistory().length() * 1 + this.estimatedValue * 3;   //70 早い
-        //this.getOperationHistory().length() * 1 + this.estimatedValue * 3;   //70 早い
-        //this.getOperationHistory().length() * 3 + this.estimatedValue * 1;   //遅い
-        //this.getOperationHistory().length() * 2 + this.estimatedValue * 1;   //遅い
-        //this.getOperationHistory().length() * 1 + this.estimatedValue * 4;   //82早い
-        //this.getOperationHistory().length() * 3 + this.estimatedValue * 5;   //58早い
-        //this.getOperationHistory().length() + score*3;
+*/
+    int fn = //this.getOperationHistory().length() * 3 + this.estimatedValue * 4; // 56
+    // this.getOperationHistory().length() * 5 + this.estimatedValue * 7; //56
+    // this.getOperationHistory().length() * 1 + this.estimatedValue * 2; //60
+    // 早い
+    // this.getOperationHistory().length() * 2 + this.estimatedValue * 3; //58
+    // this.getOperationHistory().length() * 1 + this.estimatedValue * 3; //70
+    // 早い
+    // this.getOperationHistory().length() * 1 + this.estimatedValue * 3; //70
+    // 早い
+    // this.getOperationHistory().length() * 3 + this.estimatedValue * 1; //遅い
+    // this.getOperationHistory().length() * 2 + this.estimatedValue * 1; //遅い
+    // this.getOperationHistory().length() * 1 + this.estimatedValue * 4; //82早い
+    this.getOperationHistory().length() * 3 + this.estimatedValue * 5; //58早い
+    //this.getOperationHistory().length() + this.estimatedValue + score*(int)(this.width+this.height)/2;
     return fn;
   }
 

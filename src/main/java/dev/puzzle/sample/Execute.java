@@ -22,10 +22,12 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Queue;
+import java.util.Stack;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor.AbortPolicy;
@@ -43,7 +45,42 @@ public class Execute {
 
   public static void main(String[] args) {
     System.out.println("main");
+     DFSThread();
+    //BFS();
+    //AStarThread();
+  }
+
+  public static void DFSThread() {
     int idNum = 1;
+    int limit = 38;
+    Execute exe = new Execute();
+    while (limit < 400) {
+      ExecutorService exec = Executors.newFixedThreadPool(2);
+
+      for (Iterator iterator = exe.getSolvedDataFromId(idNum).iterator(); iterator
+          .hasNext();) {
+        StringBoard board = (StringBoard) iterator.next();
+        if (board.getEstimatedValue() > limit
+            || board.getOperationHistory().length() < limit
+            /*|| (board.getOperationHistory().length() != 0
+                && board.getOperationHistory().length() < limit - 3)*/)
+          continue;
+        
+        exec.execute(new DFSExecutor(board, exe, limit));
+      }
+
+      exec.shutdown();
+      try {
+        exec.awaitTermination(Long.MAX_VALUE, TimeUnit.SECONDS);
+      } catch (InterruptedException e) {
+        e.printStackTrace();
+      }
+      limit += 2;
+    }
+  }
+
+  public static void AStarThread() {
+    int idNum = 175;//174までやった
     Execute exe = new Execute();
     ExecutorService exec = Executors.newFixedThreadPool(2);
     for (Iterator iterator = exe.getSolvedDataFromId(idNum).iterator(); iterator
@@ -51,7 +88,7 @@ public class Execute {
       StringBoard board = (StringBoard) iterator.next();
       exec.execute(new Executor(board, exe));
     }
-    
+
     exec.shutdown();
     try {
       exec.awaitTermination(Long.MAX_VALUE, TimeUnit.SECONDS);
@@ -69,19 +106,20 @@ public class Execute {
       StringBoard board = (StringBoard) iterator.next();
       StringBoard result = exe.solveByAStar(board);
       try {
-        System.out.println("AStar id:"+ board.id+ " length:"
+        System.out.println("AStar id:" + board.id + " length:"
             + result.getOperationHistory().length() + " result: "
             + result.getOperationHistory());
         StringBoard storedBoard = exe.getBoardFromId(board.id);
-        if (storedBoard.getOperationHistory().length() == 0 ||
-            storedBoard.getOperationHistory().length() > 
-            result.getOperationHistory().length()) {
+        if (storedBoard.getOperationHistory().length() == 0
+            || storedBoard.getOperationHistory().length() > result
+                .getOperationHistory()
+                .length()) {
           exe.updateOperation(board.id, result.getOperationHistory());
           System.out.println("stored History");
         }
 
       } catch (Exception e) {
-        System.out.println("id: "+board.id+ " Exception occered!!");
+        System.out.println("id: " + board.id + " Exception occered!!");
       }
     }
   }
@@ -93,32 +131,61 @@ public class Execute {
     // for (Iterator iterator = exe.getUnsolvedData().iterator(); iterator
     // for (Iterator iterator = exe.getUnsolvedDataFromId(idNum).iterator();
     // iterator
-    while (true) {
-      for (Iterator iterator = exe.getSolvedDataFromId(idNum).iterator(); iterator
-          .hasNext();) {
-        StringBoard board = (StringBoard) iterator.next();
-        int limit = 400; // デフォルト200
-        if (!board.getOperationHistory().equalsIgnoreCase("")) {
-          // もし結果がnullでなければ回答の長さを取得し、それをリミットとする
-          limit = board.getOperationHistory().length();
-        }
-        StringBoard resultBoard = exe.solveOneBoard(board, limit);
-        histories = new ArrayList<StringBoard>();
+    for (Iterator iterator = exe.getSolvedDataFromId(idNum).iterator(); iterator
+        .hasNext();) {
+      StringBoard board = (StringBoard) iterator.next();
+      int limit = 60; // デフォルト200
+      if (!board.getOperationHistory().equalsIgnoreCase("")) {
+        // もし結果がnullでなければ回答の長さを取得し、それをリミットとする
+        limit = board.getOperationHistory().length();
+      }
+      System.out.println("limit: " + limit);
+      StringBoard resultBoard = exe.solveOneBoard(board, limit);
+      histories = new ArrayList<StringBoard>();
 
-        if (resultBoard == null) {
-          System.out.println("failed");
-          continue;
-        }
-        if (!resultBoard.getOperationHistory().trim().equalsIgnoreCase("")) {
-          System.out.println("id: " + resultBoard.id + ", opeLength: "
-              + resultBoard.getOperationHistory().length());
+      if (resultBoard == null) {
+        System.out.println("failed");
+        continue;
+      }
+      if (!resultBoard.getOperationHistory().trim().equalsIgnoreCase("")) {
+        System.out.println("id: " + resultBoard.id + ", opeLength: "
+            + resultBoard.getOperationHistory().length());
+
+        if (limit > resultBoard.getOperationHistory().length()) {
           exe
               .updateOperation(
                   resultBoard.id,
                   resultBoard.getOperationHistory());
-        } else {
-          System.out.println("failed");
         }
+      } else {
+        System.out.println("failed");
+      }
+    }
+  }
+
+  public static void BFS() {
+
+    Execute exe = new Execute();
+    int idNum = 207; // 207まで最短解
+    for (Iterator iterator = exe.getSolvedDataFromId(idNum).iterator(); iterator
+        .hasNext();) {
+      StringBoard board = (StringBoard) iterator.next();
+      StringBoard result = exe.solveByBFS(board);
+      try {
+        System.out.println("BFS id:" + board.id + " length:"
+            + result.getOperationHistory().length() + " result: "
+            + result.getOperationHistory());
+        StringBoard storedBoard = exe.getBoardFromId(board.id);
+        if (storedBoard.getOperationHistory().length() == 0
+            || storedBoard.getOperationHistory().length() > result
+                .getOperationHistory()
+                .length()) {
+          exe.updateOperation(board.id, result.getOperationHistory());
+          System.out.println("stored History");
+        }
+
+      } catch (Exception e) {
+        System.out.println("id: " + board.id + " Exception occered!!");
       }
     }
   }
@@ -506,209 +573,101 @@ public class Execute {
   private StringBoard resultStringBoard;
   StringBoard bestScoreBoard;
 
-  public void solveDepth(
-      int i,
-      StringBoard aBoard,
-      HashMap<Integer, Integer> history,
-      int limit) {
-    // System.out.print(".");
-    String goal = aBoard.getGoal();
-    StringBoard goalMap = new StringBoard(aBoard.height, aBoard.width, goal);
-
-    if (this.result) {// すでに発見していたら処理しない
-      return;
-    }
-    // System.out.println("test: "+ aBoard.getStringMap()+
-    // ", goal: "+goalMap.getStringMap());
+  public StringBoard solveDepth(int i, StringBoard aBoard, int limit) {
     if (aBoard.compareTo(aBoard)) {
-      // System.out.println("result: " + aBoard.getOperationHistory());
-      this.result = true;
-      this.resultStringBoard = aBoard.clone();
-      return;
+      return aBoard;
     }
 
-    if (i > limit - 10) {
-      // System.out.println(aBoard.getOperationHistory());
-      // System.out.println("limited");
-      // System.out.print(".");
-      this.resultStringBoard = null;
-      // return false;
-    } else {
+    StringBoard copy = aBoard.clone();
+    PriorityQueue<StringBoard> open =
+        new PriorityQueue<StringBoard>(1, new StringComparator());
+    copy.setOperationHistory("");
+    open.add(copy);
 
-      int operationList = aBoard.getOperableList();
-      int lastOpelation = aBoard.getLastOperation();
-      // System.out.println(operationList+ "-"+ lastOpelation);
-      operationList -= lastOpelation;
-      String historyString = aBoard.getOperationHistory();
-      int lastCommand = 0;
-      StringBoard[] boardArray = new StringBoard[4];
-      // System.out.println("operation list: "+ operationList);
-      int k = 0;
+    HashMap<String, StringBoard> closed = new HashMap<String, StringBoard>();
+
+    while (!open.isEmpty()) {
+      StringBoard newBoard = open.poll();
+      closed.put(newBoard.getStringMap(), newBoard);
+
+      int operationList = newBoard.getOperableList();
+      // operationList -= newBoard.getLastOperation();
+      int operation = operationList;
+
       for (int j = 0; j < 4; j++) {
-        if (operationList == 0)
-          break;
-        StringBoard nextBoard = null;
-        if ((operationList & COMMAND_D) == COMMAND_D) {
-          try {
-            nextBoard = aBoard.operate(COMMAND_D);
-            nextBoard.setOperationHistory(historyString + "D");
-            lastCommand = COMMAND_D;
-          } catch (CloneNotSupportedException e) {
-            e.printStackTrace();
-          }
-          operationList -= COMMAND_D;
-        } else if ((operationList & COMMAND_L) == COMMAND_L) {
-          try {
-            nextBoard = aBoard.operate(COMMAND_L);
-            nextBoard.setOperationHistory(historyString + "L");
-            lastCommand = COMMAND_L;
-          } catch (CloneNotSupportedException e) {
-            e.printStackTrace();
-          }
-
-          operationList -= COMMAND_L;
-        } else if ((operationList & COMMAND_R) == COMMAND_R) {
-          try {
-            nextBoard = aBoard.operate(COMMAND_R);
-            nextBoard.setOperationHistory(historyString + "R");
-            lastCommand = COMMAND_R;
-          } catch (CloneNotSupportedException e) {
-            e.printStackTrace();
-          }
-
-          operationList -= COMMAND_R;
-        } else {
-          try {
-            nextBoard = aBoard.operate(COMMAND_U);
-            nextBoard.setOperationHistory(historyString + "U");
-            lastCommand = COMMAND_U;
-          } catch (CloneNotSupportedException e) {
-            e.printStackTrace();
-          }
-
-          operationList -= COMMAND_U;
-        }
-
-        // 下限法
-        int newLow = nextBoard.getEstimatedValue();
-        int move = aBoard.getOperationHistory().length();
-        if (newLow + move > limit) {
+        if (operation % 2 != 1) {
+          operation = operation >> 1;
           continue;
         }
-
-        // 同じ盤面を見つけても深さが浅い場合はパスしない
-        if (history.containsKey(nextBoard.hashCode())
-            && history.get(nextBoard.hashCode()) < i) {
-
-        } else {
-
-          if (this.bestScoreBoard == null
-              || nextBoard.score() > this.bestScoreBoard.score()) {
-            this.bestScoreBoard = nextBoard.clone();
+        operation = operation >> 1;
+        StringBoard opeBoard;
+        try {
+          if (j == 0) {
+            opeBoard = newBoard.operate(COMMAND_L);
+            opeBoard.setOperationHistory(newBoard.getOperationHistory() + "L");
+          } else if (j == 1) {
+            opeBoard = newBoard.operate(COMMAND_R);
+            opeBoard.setOperationHistory(newBoard.getOperationHistory() + "R");
+          } else if (j == 2) {
+            opeBoard = newBoard.operate(COMMAND_U);
+            opeBoard.setOperationHistory(newBoard.getOperationHistory() + "U");
+          } else {
+            opeBoard = newBoard.operate(COMMAND_D);
+            opeBoard.setOperationHistory(newBoard.getOperationHistory() + "D");
           }
 
-          // System.out.println("string: " + nextBoard.getStringMap() + " e: "
-          // + nextBoard.getEstimatedValue() + " s: " + nextBoard.score());
-          boardArray[k] = nextBoard.clone();
-          k++;
+          if (closed.containsKey(opeBoard.getStringMap())) {
+            continue;
+          }
+
+          if (opeBoard.getOperationHistory().length()
+              + opeBoard.getEstimatedValue() > limit) {
+            continue;
+          }
+
+          if (opeBoard.compareTo(opeBoard)) {
+            // if(opeBoard.getOperationHistory().length() <
+            // aBoard.getOperationHistory().length())
+            return opeBoard.clone();
+          }
+
+          if (opeBoard.getOperationHistory().length() < limit) {
+            open.add(opeBoard.clone());
+          }
+        } catch (CloneNotSupportedException e) {
+          e.printStackTrace();
         }
-      }
-
-      int min = 9999;
-      int[] commandPriority = { -1, -1, -1, -1 };
-      int minIndex = 999;
-      // System.out.println("board num: "+ k);
-      for (int m = 0; m < k; m++) {
-        for (int j = 0; j < k; j++) {
-          StringBoard stringBoard = boardArray[j];
-
-          int score = stringBoard.getEstimatedValue();
-
-          boolean insert = true;
-          for (int n = 0; n < k; n++) {
-            int p = commandPriority[n];
-            if (p == j)
-              insert = false;
-          }
-
-          if (min > score && insert) {
-            min = score;
-            minIndex = j;
-          }
-        }
-        min = 9999;
-        commandPriority[m] = minIndex;
-      }
-
-      for (int j = 0; j < k; j++) {
-        int index = commandPriority[j];
-        if (index < 0 || index == 999)
-          continue;
-        StringBoard stringBoard = boardArray[index];
-        history.put(new Integer(stringBoard.hashCode()), i);
-        solveDepth(++i, stringBoard, history, limit);
       }
     }
-    // this.resultStringBoard = null;
-    // return false;
+
+    return null;
   }
 
   public StringBoard solveOneBoard(StringBoard aBoard, int maxLimit) {
-    this.bestScoreBoard = aBoard.clone();
-    HashMap<Integer, Integer> history;
     System.out.println("solving: " + aBoard.width + "x" + aBoard.height + ": "
         + aBoard.getStringMap() + ", estimatedValue: "
         + aBoard.getEstimatedValue() + ", size: "
         + aBoard.getOperationHistory().length());
+
     int limit = aBoard.getEstimatedValue();
-    boolean returnedResult = false;
-    this.result = false;
-    this.resultStringBoard = aBoard;
-    Calendar calendar = Calendar.getInstance();
-    long start = calendar.getTimeInMillis();
-    while (limit < maxLimit) {
-      history = new HashMap<Integer, Integer>();
-      System.out.print(".");
-      this.solveDepth(0, aBoard, history, limit);
-      if (this.result)
-        break;
-      limit += 1;
-      aBoard = this.bestScoreBoard.clone();
-
-      // 3分立っていたら諦める
-      Calendar now = Calendar.getInstance();
-      long current = now.getTimeInMillis();
-      if ((current - start) > 60 * 3 * 1000/* 3分 */) {
-        System.out.println("id=" + aBoard.id + ":タイムアウト");
-        break;
-      }
+    StringBoard result = null;
+    while (result == null) {
+      result = this.solveDepth(0, aBoard, limit);
+      limit++;
     }
-    history = new HashMap<Integer, Integer>();
 
-    if (this.resultStringBoard == null)
-      return null;
-
-    boolean result2 =
-        (this.resultStringBoard.getStringMap().equalsIgnoreCase("")) ? false
-            : true;
-    if (result2 == true) {
-      System.out.println("result: " + result2 + " string: "
-          + this.resultStringBoard.getOperationHistory());
-      return this.resultStringBoard.clone();
-    } else {
-      return null;
-    }
+    return null;
   }
 
   public StringBoard solveByAStar(StringBoard aBoard) {
     PriorityQueue<StringBoard> open =
         new PriorityQueue<StringBoard>(1, new StringComparator());
-    HashMap<Integer, StringBoard> closed = new HashMap<Integer, StringBoard>();
+    HashMap<String, StringBoard> closed = new HashMap<String, StringBoard>();
     StringBoard copy = aBoard.clone();
     open.add(copy);
     int limit = 500;
     String opeHistory = aBoard.getOperationHistory();
-    if(opeHistory!=null && opeHistory.length()!=0){
+    if (opeHistory != null && opeHistory.length() != 0) {
       limit = opeHistory.length();
     }
 
@@ -726,15 +685,16 @@ public class Execute {
         return null;
       }
 
-      StringBoard n = open.poll(); //取り出し
-      closed.put(n.hashCode(), n);
+      StringBoard n = open.poll(); // 取り出し
+      closed.put(n.getStringMap(), n);
       if (n.compareTo(n)) {
-        return n;
+        System.out.println("found");
+        if (n.getOperationHistory().length() < limit)
+          return n;
       }
-      
 
       int operationList = n.getOperableList();
-      //operationList -= n.getLastOperation();
+      // operationList -= n.getLastOperation();
       int operation = operationList;
       for (int i = 0; i < 4; i++) {
         if (operation % 2 != 1) {
@@ -765,19 +725,19 @@ public class Execute {
         }
         if (next == null)
           continue;
-        
-        /*
-        int nextScore = next.getOperationHistory().length()+ next.getEstimatedValue();
-        if(nextScore > limit){
-          //System.out.println("next score:"+ nextScore);
-          //closed.put(next.hashCode(), next);
-          continue;
-        }*/
 
-        StringBoard past = closed.get(next.hashCode());
+        int nextScore =
+            next.getOperationHistory().length() + next.getEstimatedValue();
+        if (nextScore > limit) {
+          //System.out.println("next score:" + nextScore);
+          //closed.put(next.getStringMap(), next);
+          continue;
+        }
+
+        StringBoard past = closed.get(next.getStringMap());
         if (past != null) {
           if (next.calculateSequenseScore() < past.calculateSequenseScore()) {
-            closed.remove(past.hashCode());
+            closed.remove(past.getStringMap());
             open.add(next);
           } else {
             continue;
@@ -787,6 +747,147 @@ public class Execute {
         }
       }
     }
+    return null;
+  }
+
+  @SuppressWarnings("unused")
+  public StringBoard solveByBFS(StringBoard aBoard) {
+
+    StringBoard copy = aBoard.clone();
+    copy.setOperationHistory("");
+
+    HashMap<String, StringBoard> close = new HashMap<String, StringBoard>();
+    LinkedList<StringBoard> queue = new LinkedList<StringBoard>();
+    queue.add(copy);
+
+    HashMap<String, StringBoard> closedGoal =
+        new HashMap<String, StringBoard>();
+    LinkedList<StringBoard> goalQueue = new LinkedList<StringBoard>();
+    String goalString = copy.getGoal();
+    StringBoard goal = new StringBoard(copy.height, copy.width, goalString);
+    goalQueue.add(goal);
+    while (!queue.isEmpty()) {
+
+      // ***from start***//
+      StringBoard newBoard = queue.poll();
+      close.put(newBoard.getStringMap(), newBoard);
+
+      // System.out.println("closed:"+close.size());
+      if (close.size() > 800000) {
+        // メモリの限界
+        close = null;
+        queue = null;
+        closedGoal = null;
+        goalQueue = null;
+        return null;
+      }
+      int operationList = newBoard.getOperableList();
+      int operation = operationList;
+      String history = newBoard.getOperationHistory();
+      for (int i = 0; i < 4; i++) {
+        if (operation % 2 != 1) {
+          operation = operation >> 1;
+          continue;
+        }
+        operation = operation >> 1;
+        StringBoard nextBoard = null;
+        try {
+          if (i == 0) {
+            nextBoard = newBoard.operate(COMMAND_L);
+            nextBoard.setOperationHistory(history + "L");
+          } else if (i == 1) {
+            nextBoard = newBoard.operate(COMMAND_R);
+            nextBoard.setOperationHistory(history + "R");
+          } else if (i == 2) {
+            nextBoard = newBoard.operate(COMMAND_U);
+            nextBoard.setOperationHistory(history + "U");
+          } else {
+            nextBoard = newBoard.operate(COMMAND_D);
+            nextBoard.setOperationHistory(history + "D");
+          }
+
+          if (nextBoard == null)
+            continue;
+
+          if (close.containsKey(nextBoard.getStringMap()))
+            continue;
+
+          if (nextBoard.getEstimatedValue() > newBoard.getEstimatedValue() * 2)
+            continue;
+
+          if (nextBoard.compareTo(nextBoard)) {
+            close = null;
+            queue = null;
+            closedGoal = null;
+            goalQueue = null;
+            return nextBoard;
+          }
+
+          queue.add(nextBoard.clone());
+
+        } catch (CloneNotSupportedException e) {
+          // TODO 自動生成された catch ブロック
+          e.printStackTrace();
+        }
+
+      }
+
+      // ***from goal***//
+      StringBoard newGoal = goalQueue.poll();
+      closedGoal.put(newGoal.getStringMap(), newGoal);
+      operationList = newGoal.getOperableList();
+      operation = operationList;
+      String goalhistory = newGoal.getOperationHistory();
+      for (int i = 0; i < 4; i++) {
+
+        if (operation % 2 != 1) {
+          operation = operation >> 1;
+          continue;
+        }
+        operation = operation >> 1;
+        StringBoard nextGoal = null;
+        try {
+          if (i == 0) {
+            nextGoal = newGoal.operate(COMMAND_L);
+            nextGoal.setOperationHistory("R" + goalhistory);
+          } else if (i == 1) {
+            nextGoal = newGoal.operate(COMMAND_R);
+            nextGoal.setOperationHistory("L" + goalhistory);
+          } else if (i == 2) {
+            nextGoal = newGoal.operate(COMMAND_U);
+            nextGoal.setOperationHistory("D" + goalhistory);
+          } else {
+            nextGoal = newGoal.operate(COMMAND_D);
+            nextGoal.setOperationHistory("U" + goalhistory);
+          }
+
+          if (nextGoal == null)
+            continue;
+
+          if (closedGoal.containsKey(nextGoal.getStringMap()))
+            continue;
+
+          if (close.containsKey(nextGoal.getStringMap())) {
+            System.out.println("found route");
+            StringBoard result = close.get(nextGoal.getStringMap());
+            result.setOperationHistory(result.getOperationHistory()
+                + nextGoal.getOperationHistory());
+            close = null;
+            queue = null;
+            closedGoal = null;
+            goalQueue = null;
+            return result;
+          }
+
+          goalQueue.add(nextGoal.clone());
+
+        } catch (CloneNotSupportedException e) {
+          // TODO 自動生成された catch ブロック
+          e.printStackTrace();
+        }
+      }
+    }
+
     return null;
   }
 
@@ -1044,7 +1145,7 @@ public class Execute {
         board.setOperationHistory(rs.getString(5));
 
       conn.close();
-      
+
       return board;
     } catch (Exception e) {
       e.printStackTrace();
@@ -1085,11 +1186,11 @@ public class Execute {
     }
   }
 
-  synchronized public boolean  updateOperation(int id, String operation) {
+  synchronized public boolean updateOperation(int id, String operation) {
     Connection conn = null;
 
     try {
-      wait();
+      //wait();
       Class.forName("org.sqlite.JDBC");
 
       conn = DriverManager.getConnection("jdbc:sqlite:results.db");
@@ -1099,11 +1200,11 @@ public class Execute {
           + "' where id = " + id);
 
       conn.close();
-      notifyAll();
+      //notifyAll();
       return true;
     } catch (Exception e) {
       e.printStackTrace();
-      notifyAll();
+      //notifyAll();
       return false;
     }
   }

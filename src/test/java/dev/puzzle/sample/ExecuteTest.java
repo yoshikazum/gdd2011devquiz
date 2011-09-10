@@ -130,48 +130,40 @@ public class ExecuteTest extends TestCase {
   }
 
   public void testSolveOneBoard() {
-
-    /*
-     * StringBoard aBoard = new StringBoard(0, 6, 6,
-     * "125RG=783M4=DPFLABY9K0=HXEJ=OI=QWTUZ");
-     * 
-     * //StringBoard aBoard = new StringBoard(0, 3, 3, "168452=30"); StringBoard
-     * resultBoard = null; int limit = 1; resultBoard =
-     * exe.solveOneBoard(aBoard,500);
-     * 
-     * if (resultBoard != null) { System.out.println("id: " + resultBoard.id +
-     * ", "+ resultBoard.getOperationHistory().length()+" ope: " +
-     * resultBoard.getOperationHistory()); exe.updateOperation(resultBoard.id,
-     * resultBoard.getOperationHistory()); } else {
-     * System.out.println("failed"); } assertTrue(exe.result);
-     */
-
+    
   }
 
   public void testSolveDepth() {
-    /*
-     * HashMap<Integer, StringBoard> history = new HashMap<Integer,
-     * StringBoard>(); StringBoard aBoard = new StringBoard(0, 5, 3,
-     * "5163E9=B084CAD2"); //StringBoard aBoard = new StringBoard(0, 3, 3,
-     * "168452=30"); System.out.println("estimatedValue: " +
-     * aBoard.getEstimatedValue()); int limit = aBoard.getEstimatedValue();
-     * boolean returnedResult = false; while (limit < 200) { //
-     * aBoard.getEstimatedValue() * 2 // System.out.println("limit: "+limit);
-     * returnedResult = exe.solveDepth(0, aBoard, history, limit); if
-     * (exe.result) break; limit += 2; history = new HashMap<Integer,
-     * StringBoard>(); //System.out.println("best; "+
-     * exe.bestScoreBoard.getStringMap()); //System.out.println("goal: "+
-     * aBoard.getGoal()); aBoard = exe.bestScoreBoard; } assertTrue(exe.result);
-     */
+    StringBoard aBoard = new StringBoard(0, 3, 6, "7D=0HG82C46B9F1E5A");
+    //StringBoard aBoard = new StringBoard(0, 3, 3, "512043768");
+    int limit = aBoard.getEstimatedValue();
+    StringBoard result = null;
+    while(result == null){
+      result = exe.solveDepth(0, aBoard, 60);
+      limit++;
+    }
+    assertNotNull(result);
   }
 
   public void testSolveByAStar() {
     // StringBoard aBoard = new StringBoard(0, 6, 5,
     // "24A3=169P0=8=KJQ7=FEHGN=TMLCRS");
     StringBoard aBoard = new StringBoard(0, 3, 6, "7D=0HG82C46B9F1E5A");
-    //StringBoard aBoard = new StringBoard(0, 3, 3, "168452=30");
+    // StringBoard aBoard = new StringBoard(0, 3, 3, "168452=30");
     StringBoard result = exe.solveByAStar(aBoard);
     System.out.println("AStar length:" + result.getOperationHistory().length()
+        + " result: " + result.getOperationHistory());
+    assertNotNull(result);
+  }
+  
+  public void testSolveByBFS(){
+
+    StringBoard aBoard = new StringBoard(0, 3, 5, "20716CD=9E=4A53");
+    //StringBoard aBoard = new StringBoard(0, 4, 3, "5362190=B47A");
+    //StringBoard aBoard = new StringBoard(0, 6, 5, "12=E4D9HIF8=GN576LOABMTPKQSR0J");
+    //StringBoard aBoard = new StringBoard(0, 5, 6, "82935=174ABCD=RHTNJKFLI0PQSOGM");
+    StringBoard result = exe.solveByBFS(aBoard);
+    System.out.println("BFS length:" + result.getOperationHistory().length()
         + " result: " + result.getOperationHistory());
     assertNotNull(result);
   }
